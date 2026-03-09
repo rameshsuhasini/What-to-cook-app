@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# environment variables
+.env
+
+# build output
+dist/
+
+# nextjs build
+.next/
+
+# coverage reports
+coverage/
+
+# logs
+logs
+*.log
+
+# OS files
+.DS_Store
