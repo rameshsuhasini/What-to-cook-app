@@ -1,0 +1,355 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// ─────────────────────────────────────────
+// Prisma Schema — What to Cook?
+// Generator + Datasource
+// ─────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// Why: Enums enforce valid values at the
+// database level — no invalid diet types
+// or meal types can ever be saved
+// ─────────────────────────────────────────
+
+enum DietType {
+  NONE
+  VEGETARIAN
+  VEGAN
+  KETO
+  PALEO
+  GLUTEN_FREE
+  DAIRY_FREE
+  HALAL
+  KOSHER
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+// ─────────────────────────────────────────
+// USER
+// Core auth entity — minimal data here
+// Profile data lives in UserProfile
+// Why: Separation of concerns — auth data
+// and profile data have different update
+// frequencies and access patterns
+// ─────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLogin     DateTime? @map("last_login")
+
+  // Relations
+  profile       UserProfile?
+  recipes       Recipe[]
+  savedRecipes  SavedRecipe[]
+  mealPlans     MealPlan[]
+  groceryLists  GroceryList[]
+  pantryItems   PantryItem[]
+  weightLogs    WeightLog[]
+  nutritionLogs NutritionLog[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// USER PROFILE
+// Health and preference data
+// Why separate from User: Profile updates
+// frequently, auth data rarely. Keeps
+// the users table lean and fast for auth
+// queries
+// ─────────────────────────────────────────
+
+model UserProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique @map("user_id")
+  age             Int?
+  gender          Gender?
+  heightCm        Int?      @map("height_cm")
+  weightKg        Decimal?  @map("weight_kg") @db.Decimal(5, 2)
+  targetWeightKg  Decimal?  @map("target_weight_kg") @db.Decimal(5, 2)
+  dietType        DietType  @default(NONE) @map("diet_type")
+  calorieGoal     Int?      @map("calorie_goal")
+  proteinGoal     Int?      @map("protein_goal")
+  carbGoal        Int?      @map("carb_goal")
+  fatGoal         Int?      @map("fat_goal")
+  healthConditions String?  @map("health_conditions")
+  allergies       String?
+  foodPreferences String?   @map("food_preferences")
+  avatarUrl       String?   @map("avatar_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// ─────────────────────────────────────────
+// RECIPE
+// Can be created by users or AI-generated
+// Why isAiGenerated flag: Lets us track
+// which recipes came from AI vs manual
+// entry — useful for analytics and UI
+// ─────────────────────────────────────────
+
+model Recipe {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  imageUrl        String?   @map("image_url")
+  prepTimeMinutes Int?      @map("prep_time_minutes")
+  cookTimeMinutes Int?      @map("cook_time_minutes")
+  servings        Int?
+  calories        Int?
+  protein         Int?
+  carbs           Int?
+  fat             Int?
+  cuisine         String?
+  dietType        DietType  @default(NONE) @map("diet_type")
+  isAiGenerated   Boolean   @default(false) @map("is_ai_generated")
+  createdByUserId String?   @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  createdBy       User?         @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  ingredients     RecipeIngredient[]
+  steps           RecipeStep[]
+  savedBy         SavedRecipe[]
+  mealPlanItems   MealPlanItem[]
+
+  @@map("recipes")
+}
+
+// ─────────────────────────────────────────
+// RECIPE INGREDIENT
+// ─────────────────────────────────────────
+
+model RecipeIngredient {
+  id             String   @id @default(cuid())
+  recipeId       String   @map("recipe_id")
+  ingredientName String   @map("ingredient_name")
+  quantity       Decimal? @db.Decimal(10, 2)
+  unit           String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  recipe         Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@map("recipe_ingredients")
+}
+
+// ─────────────────────────────────────────
+// RECIPE STEP
+// ─────────────────────────────────────────
+
+model RecipeStep {
+  id              String   @id @default(cuid())
+  recipeId        String   @map("recipe_id")
+  stepNumber      Int      @map("step_number")
+  instructionText String   @map("instruction_text")
+
+  // Relations
+  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@map("recipe_steps")
+}
+
+// ─────────────────────────────────────────
+// SAVED RECIPE (Favorites)
+// Why explicit join model: Allows adding
+// extra fields later (notes, rating, etc)
+// ─────────────────────────────────────────
+
+model SavedRecipe {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  recipeId  String   @map("recipe_id")
+  savedAt   DateTime @default(now()) @map("saved_at")
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+  @@map("saved_recipes")
+}
+
+// ─────────────────────────────────────────
+// MEAL PLAN
+// One plan per week per user
+// ─────────────────────────────────────────
+
+model MealPlan {
+  id             String         @id @default(cuid())
+  userId         String         @map("user_id")
+  weekStartDate  DateTime       @map("week_start_date") @db.Date
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items          MealPlanItem[]
+  groceryLists   GroceryList[]
+
+  @@unique([userId, weekStartDate])
+  @@map("meal_plans")
+}
+
+// ─────────────────────────────────────────
+// MEAL PLAN ITEM
+// Individual meal slot in the weekly plan
+// Why customMealName: Users can add meals
+// that aren't in the recipe DB yet
+// ─────────────────────────────────────────
+
+model MealPlanItem {
+  id             String    @id @default(cuid())
+  mealPlanId     String    @map("meal_plan_id")
+  date           DateTime  @db.Date
+  mealType       MealType  @map("meal_type")
+  recipeId       String?   @map("recipe_id")
+  customMealName String?   @map("custom_meal_name")
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  mealPlan       MealPlan  @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe         Recipe?   @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@map("meal_plan_items")
+}
+
+// ─────────────────────────────────────────
+// GROCERY LIST
+// Generated from a meal plan
+// ─────────────────────────────────────────
+
+model GroceryList {
+  id          String        @id @default(cuid())
+  userId      String        @map("user_id")
+  mealPlanId  String?       @map("meal_plan_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealPlan    MealPlan?     @relation(fields: [mealPlanId], references: [id], onDelete: SetNull)
+  items       GroceryItem[]
+
+  @@map("grocery_lists")
+}
+
+// ─────────────────────────────────────────
+// GROCERY ITEM
+// ─────────────────────────────────────────
+
+model GroceryItem {
+  id             String      @id @default(cuid())
+  groceryListId  String      @map("grocery_list_id")
+  ingredientName String      @map("ingredient_name")
+  quantity       Decimal?    @db.Decimal(10, 2)
+  unit           String?
+  category       String?
+  isChecked      Boolean     @default(false) @map("is_checked")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  groceryList    GroceryList @relation(fields: [groceryListId], references: [id], onDelete: Cascade)
+
+  @@map("grocery_items")
+}
+
+// ─────────────────────────────────────────
+// PANTRY ITEM
+// Ingredients the user already has at home
+// ─────────────────────────────────────────
+
+model PantryItem {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  ingredientName String   @map("ingredient_name")
+  quantity       Decimal? @db.Decimal(10, 2)
+  unit           String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pantry_items")
+}
+
+// ─────────────────────────────────────────
+// WEIGHT LOG
+// Daily weight tracking entries
+// ─────────────────────────────────────────
+
+model WeightLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  weightKg  Decimal  @map("weight_kg") @db.Decimal(5, 2)
+  logDate   DateTime @map("log_date") @db.Date
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, logDate])
+  @@map("weight_logs")
+}
+
+// ─────────────────────────────────────────
+// NUTRITION LOG
+// Daily nutrition tracking
+// ─────────────────────────────────────────
+
+model NutritionLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  date      DateTime @db.Date
+  calories  Int?
+  protein   Int?
+  carbs     Int?
+  fat       Int?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("nutrition_logs")
+}
