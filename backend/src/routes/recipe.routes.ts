@@ -12,8 +12,7 @@
 import { Router } from 'express'
 import { body, param, query } from 'express-validator'
 import recipeController from '../controllers/recipe.controller'
-import { optionalAuthenticate } from '../middleware/optional.auth.middleware'
-import { authenticate} from '../middleware/auth.middleware'
+import { authenticate, optionalAuthenticate} from '../middleware/auth.middleware'
 import { validate } from '../middleware/validate.middleware'
 
 const router = Router()
