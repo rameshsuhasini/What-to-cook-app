@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import recipeRoutes from './routes/recipe.routes';
 import mealPlanRoutes from './routes/meal-plan.routes'
+import groceryRoutes from './routes/grocery.routes'
 
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use('/api/recipes', recipeRoutes)
 app.use('/api/meal-plans', mealPlanRoutes)
+app.use('/api/groceries', groceryRoutes)
 
 // ─── Health Check ─────────────────────────────────────────
 app.get('/api/health', (_req: Request, res: Response) => {
