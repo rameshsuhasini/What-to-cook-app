@@ -98,19 +98,30 @@ export class MealPlanRepository {
   }
 
   /**
-   * Add a single meal item to an existing meal plan
+   * Add a single meal item to an existing meal plan.
+   * Uses delete-then-create within a transaction so that the same
+   * (mealPlanId, date, mealType) slot can never hold two rows.
+   * This prevents the "delete reveals a ghost item" bug when the AI
+   * is run more than once or a manual meal pre-existed in the slot.
    */
   async addItem(mealPlanId: string, item: CreateMealPlanItemDTO) {
-    return prisma.mealPlanItem.create({
-      data: {
-        mealPlanId,
-        date: new Date(item.date),
-        mealType: item.mealType,
-        recipeId: item.recipeId ?? null,
-        customMealName: item.customMealName ?? null,
-        notes: item.notes ?? null,
-      },
-      select: mealPlanItemSelect,
+    const date = new Date(item.date)
+    return prisma.$transaction(async (tx) => {
+      // Remove any existing item for this exact slot first
+      await tx.mealPlanItem.deleteMany({
+        where: { mealPlanId, date, mealType: item.mealType },
+      })
+      return tx.mealPlanItem.create({
+        data: {
+          mealPlanId,
+          date,
+          mealType: item.mealType,
+          recipeId: item.recipeId ?? null,
+          customMealName: item.customMealName ?? null,
+          notes: item.notes ?? null,
+        },
+        select: mealPlanItemSelect,
+      })
     })
   }
 

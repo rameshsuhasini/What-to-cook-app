@@ -169,6 +169,42 @@ export class PantryService {
   }
 
   /**
+   * FIND SIMILAR ITEMS
+   * Returns pantry items with a name similar to the given name.
+   * Used to warn the user before adding a near-duplicate.
+   */
+  async findSimilarItems(
+    userId: string,
+    name: string
+  ): Promise<PantryItemResponse[]> {
+    const items = await pantryRepository.findSimilar(userId, name)
+    return items.map(this.sanitize)
+  }
+
+  /**
+   * MERGE PANTRY ITEMS
+   * Combines two items into one, summing quantities.
+   * The "keep" item survives; the "merge" item is deleted.
+   */
+  async mergeItems(
+    userId: string,
+    keepId: string,
+    mergeId: string
+  ): Promise<PantryItemResponse> {
+    // Verify both items belong to this user
+    const [keepOwner, mergeOwner] = await Promise.all([
+      pantryRepository.isOwner(keepId, userId),
+      pantryRepository.isOwner(mergeId, userId),
+    ])
+    if (!keepOwner || !mergeOwner) {
+      throw new Error('One or both items not found or access denied')
+    }
+
+    const item = await pantryRepository.mergeItems(keepId, mergeId)
+    return this.sanitize(item)
+  }
+
+  /**
    * GET INGREDIENT NAMES
    * Returns a flat list of ingredient names.
    * Used by the AI pantry suggestions feature.

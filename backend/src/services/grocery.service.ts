@@ -11,6 +11,7 @@
 
 import { prisma } from '../lib/prisma'
 import groceryRepository from '../repositories/grocery.repository'
+import pantryRepository from '../repositories/pantry.repository'
 import {
   CreateGroceryItemDTO,
   UpdateGroceryItemDTO,
@@ -239,6 +240,21 @@ export class GroceryService {
     // Merge duplicates and infer categories
     const mergedItems = this.mergeIngredients(allIngredients)
 
+    // Subtract what the user already has in their pantry
+    const pantryItems = await pantryRepository.findAll(userId, { limit: 500 })
+    const pantryNormalized = pantryItems.items.map((p) => ({
+      ingredientName: p.ingredientName,
+      quantity: p.quantity !== null ? Number(p.quantity) : null,
+      unit: p.unit,
+    }))
+    const filteredItems = this.subtractPantryItems(mergedItems, pantryNormalized)
+
+    if (filteredItems.length === 0) {
+      throw new Error(
+        'Your pantry already covers all the ingredients needed for this meal plan!'
+      )
+    }
+
     // Delete existing list for this meal plan if one exists
     const existing = await groceryRepository.findByMealPlan(userId, mealPlanId)
     if (existing) {
@@ -246,7 +262,7 @@ export class GroceryService {
     }
 
     // Create fresh list
-    const list = await groceryRepository.create(userId, mergedItems, mealPlanId)
+    const list = await groceryRepository.create(userId, filteredItems, mealPlanId)
 
     return this.groupByCategory(this.sanitizeList(list))
   }
@@ -305,6 +321,17 @@ export class GroceryService {
   }
 
   /**
+   * DELETE LIST
+   * Delete an entire grocery list and all its items
+   */
+  async deleteList(userId: string, groceryListId: string): Promise<void> {
+    const isOwner = await groceryRepository.isOwner(groceryListId, userId)
+    if (!isOwner) throw new Error('Grocery list not found or access denied')
+
+    await groceryRepository.delete(groceryListId)
+  }
+
+  /**
    * CHECK ALL / UNCHECK ALL
    * Bulk toggle all items in a list
    */
@@ -324,6 +351,70 @@ export class GroceryService {
   /**
    * Convert Decimal quantity to number on list
    */
+  /**
+   * SUBTRACT PANTRY ITEMS
+   * Removes or reduces grocery items that are already covered by the pantry.
+   *
+   * Matching strategy: case-insensitive substring match.
+   * e.g. "chicken breast" matches "chicken", "Olive Oil" matches "olive oil"
+   *
+   * Quantity logic:
+   * - Pantry item has no quantity → assume sufficient, skip grocery item entirely
+   * - Both have quantities + same unit → subtract; only add if remainder > 0
+   * - Units differ or grocery has no quantity → keep grocery item (can't compare safely)
+   */
+  private subtractPantryItems(
+    groceryItems: CreateGroceryItemDTO[],
+    pantryItems: { ingredientName: string; quantity: number | null; unit: string | null }[]
+  ): CreateGroceryItemDTO[] {
+    return groceryItems.reduce<CreateGroceryItemDTO[]>((acc, groceryItem) => {
+      const groceryName = groceryItem.ingredientName.toLowerCase().trim()
+
+      // Find best pantry match via substring
+      const pantryMatch = pantryItems.find((p) => {
+        const pantryName = p.ingredientName.toLowerCase().trim()
+        return pantryName.includes(groceryName) || groceryName.includes(pantryName)
+      })
+
+      // Not in pantry — keep as-is
+      if (!pantryMatch) {
+        acc.push(groceryItem)
+        return acc
+      }
+
+      // Pantry has it with no quantity → assume sufficient, skip
+      if (pantryMatch.quantity === null) {
+        return acc
+      }
+
+      // Grocery item has no quantity → can't subtract, keep it
+      if (groceryItem.quantity === undefined || groceryItem.quantity === null) {
+        acc.push(groceryItem)
+        return acc
+      }
+
+      // Both have quantities — only subtract if units match (or both are null)
+      const unitsMatch =
+        (pantryMatch.unit ?? '').toLowerCase().trim() ===
+        (groceryItem.unit ?? '').toLowerCase().trim()
+
+      if (!unitsMatch) {
+        // Different units — can't safely compare, keep original
+        acc.push(groceryItem)
+        return acc
+      }
+
+      const remainder = groceryItem.quantity - pantryMatch.quantity
+      if (remainder > 0) {
+        // Still need some — add reduced quantity
+        acc.push({ ...groceryItem, quantity: remainder })
+      }
+      // remainder <= 0 → pantry covers it fully, skip
+
+      return acc
+    }, [])
+  }
+
   private sanitizeList(list: any): GroceryListResponse {
     return {
       ...list,

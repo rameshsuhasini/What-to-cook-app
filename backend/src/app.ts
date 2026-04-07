@@ -1,4 +1,5 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -9,7 +10,9 @@ import recipeRoutes from './routes/recipe.routes';
 import mealPlanRoutes from './routes/meal-plan.routes'
 import groceryRoutes from './routes/grocery.routes'
 import pantryRoutes from './routes/pantry.routes'
-
+import healthRoutes from './routes/health.routes'
+import aiRoutes from './routes/ai.routes'
+import profileRoutes from './routes/profile.routes'
 
 dotenv.config();
 
@@ -26,10 +29,19 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+// Serve uploaded files with cross-origin policy so the frontend (port 3000)
+// can load images served from the backend (port 5000)
+app.use('/uploads', (_req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+  next()
+}, express.static(path.join(process.cwd(), 'uploads')));
 app.use('/api/recipes', recipeRoutes)
 app.use('/api/meal-plans', mealPlanRoutes)
+app.use('/api/ai', aiRoutes)
 app.use('/api/groceries', groceryRoutes)
 app.use('/api/pantry', pantryRoutes)
+app.use('/api/profile', profileRoutes)
+app.use('/api', healthRoutes)
 
 // ─── Health Check ─────────────────────────────────────────
 app.get('/api/health', (_req: Request, res: Response) => {

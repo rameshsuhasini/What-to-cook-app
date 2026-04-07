@@ -76,6 +76,15 @@ router.delete(
   groceryController.deleteItem.bind(groceryController)
 )
 
+// ── DELETE /api/groceries/:id ────────────
+router.delete(
+  '/:id',
+  authenticate,
+  [param('id').notEmpty().withMessage('List ID is required')],
+  validate,
+  groceryController.deleteList.bind(groceryController)
+)
+
 // ── GET /api/groceries/:id ───────────────
 router.get(
   '/:id',

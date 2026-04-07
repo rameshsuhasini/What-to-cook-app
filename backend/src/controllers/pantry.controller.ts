@@ -122,6 +122,50 @@ export class PantryController {
   }
 
   /**
+   * GET /api/pantry/check-similar?name=...
+   * Protected — returns pantry items similar to the given name.
+   * Used to warn the user before they create a near-duplicate.
+   */
+  async checkSimilar(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId
+      const name = (req.query.name as string | undefined)?.trim() ?? ''
+      if (!name) {
+        res.status(200).json({ success: true, data: { similar: [] } })
+        return
+      }
+      const similar = await pantryService.findSimilarItems(userId, name)
+      res.status(200).json({ success: true, data: { similar } })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * POST /api/pantry/merge
+   * Protected — merges two pantry items into one.
+   * Body: { keepId, mergeId }
+   */
+  async mergeItems(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId
+      const { keepId, mergeId } = req.body as { keepId: string; mergeId: string }
+      const item = await pantryService.mergeItems(userId, keepId, mergeId)
+      res.status(200).json({ success: true, data: { item } })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
    * DELETE /api/pantry/:id
    * Protected — deletes a single pantry item
    */

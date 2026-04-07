@@ -87,56 +87,101 @@ export class PantryRepository {
   }
 
   /**
-   * Bulk create multiple pantry items in a single transaction
-   * Skips duplicates — does not throw if item already exists
+   * Bulk create/merge multiple pantry items without an interactive transaction.
+   *
+   * Why no interactive transaction:
+   *   The old approach ran findFirst + create/update sequentially inside
+   *   $transaction(async tx => { for... }), which is one DB round-trip per
+   *   item. On Neon serverless the proxy latency makes this exceed the 5 s
+   *   transaction timeout for lists of 20+ items.
+   *
+   * Strategy (3 DB round-trips total, regardless of list size):
+   *   1. findMany  — load all existing pantry items for this user
+   *   2. createMany — insert genuinely new items in one statement
+   *   3. $transaction([...updates]) — batch all updates in one round-trip
    */
   async bulkCreate(userId: string, items: CreatePantryItemDTO[]) {
-    return prisma.$transaction(async (tx) => {
-      const results = []
+    if (items.length === 0) return []
 
-      for (const item of items) {
-        // Check if item already exists for this user
-        const existing = await tx.pantryItem.findFirst({
-          where: {
-            userId,
-            ingredientName: {
-              equals: item.ingredientName.trim(),
-              mode: 'insensitive',
-            },
-          },
-        })
-
-        if (existing) {
-          // Update quantity if provided, otherwise skip
-          if (item.quantity !== undefined) {
-            const updated = await tx.pantryItem.update({
-              where: { id: existing.id },
-              data: {
-                quantity: item.quantity,
-                unit: item.unit?.trim() ?? existing.unit,
-              },
-              select: pantryItemSelect,
-            })
-            results.push(updated)
-          } else {
-            results.push(existing)
-          }
-        } else {
-          const created = await tx.pantryItem.create({
-            data: {
-              userId,
-              ingredientName: item.ingredientName.trim(),
-              quantity: item.quantity ?? null,
-              unit: item.unit?.trim() ?? null,
-            },
-            select: pantryItemSelect,
-          })
-          results.push(created)
-        }
-      }
-
-      return results
+    // ── Round-trip 1: load all existing items ──────────────────────────────
+    const existingItems = await prisma.pantryItem.findMany({
+      where: { userId },
+      select: pantryItemSelect,
     })
+
+    // Build a normalised map for case-insensitive dedup
+    const existingMap = new Map(
+      existingItems.map((e) => [e.ingredientName.toLowerCase().trim(), e])
+    )
+
+    // Deduplicate the input against itself (later entries win)
+    const dedupedInput = new Map<string, CreatePantryItemDTO>()
+    for (const item of items) {
+      dedupedInput.set(item.ingredientName.toLowerCase().trim(), item)
+    }
+
+    const toCreate: CreatePantryItemDTO[] = []
+    const toUpdate: Array<{ id: string; quantity: number | null; unit: string | null }> = []
+
+    for (const item of dedupedInput.values()) {
+      const key = item.ingredientName.toLowerCase().trim()
+      const found = existingMap.get(key)
+
+      if (found) {
+        // Merge: update quantity only when one is provided
+        if (item.quantity !== undefined) {
+          toUpdate.push({
+            id: found.id,
+            quantity: item.quantity,
+            unit: item.unit?.trim() ?? found.unit,
+          })
+        }
+      } else {
+        toCreate.push(item)
+      }
+    }
+
+    // ── Round-trips 2 & 3 in parallel ─────────────────────────────────────
+    const [updatedItems, createdItems] = await Promise.all([
+      // Round-trip 2: all updates in one array-form transaction
+      toUpdate.length > 0
+        ? prisma.$transaction(
+            toUpdate.map((u) =>
+              prisma.pantryItem.update({
+                where: { id: u.id },
+                data: { quantity: u.quantity, unit: u.unit },
+                select: pantryItemSelect,
+              })
+            )
+          )
+        : Promise.resolve([] as typeof existingItems),
+
+      // Round-trip 3a: create all new items; 3b: fetch them back (createMany
+      // doesn't return rows in Prisma)
+      toCreate.length > 0
+        ? prisma.pantryItem
+            .createMany({
+              data: toCreate.map((i) => ({
+                userId,
+                ingredientName: i.ingredientName.trim(),
+                quantity: i.quantity ?? null,
+                unit: i.unit?.trim() ?? null,
+              })),
+              skipDuplicates: true,
+            })
+            .then(() =>
+              prisma.pantryItem.findMany({
+                where: {
+                  userId,
+                  ingredientName: { in: toCreate.map((i) => i.ingredientName.trim()) },
+                },
+                select: pantryItemSelect,
+              })
+            )
+        : Promise.resolve([] as typeof existingItems),
+    ])
+
+    return [...updatedItems, ...createdItems]
   }
 
   /**
@@ -182,6 +227,93 @@ export class PantryRepository {
       orderBy: { ingredientName: 'asc' },
     })
     return items.map((i) => i.ingredientName)
+  }
+
+  /**
+   * Strip common descriptive adjectives from an ingredient name
+   * so that "ripe avocado" and "avocado" share the same core.
+   */
+  private stripAdjectives(name: string): string {
+    const ADJECTIVES = new Set([
+      'ripe', 'fresh', 'raw', 'frozen', 'dried', 'whole', 'organic',
+      'baby', 'large', 'small', 'medium', 'chopped', 'sliced', 'diced',
+      'minced', 'grated', 'peeled', 'cooked', 'roasted', 'grilled',
+      'canned', 'tinned', 'ground', 'crushed', 'shredded', 'boneless',
+      'skinless', 'lean', 'extra', 'virgin', 'pure', 'plain', 'low',
+      'fat', 'free', 'reduced', 'full', 'half', 'unsalted', 'salted',
+    ])
+    return name
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter((w) => !ADJECTIVES.has(w))
+      .join(' ')
+      .trim()
+  }
+
+  /**
+   * Find pantry items whose name is similar to the given name.
+   * Catches cases like "avocado" vs "ripe avocado" and
+   * "chicken" vs "chicken breast".
+   * Excludes exact matches — those are handled by the duplicate check.
+   */
+  async findSimilar(userId: string, name: string) {
+    const all = await prisma.pantryItem.findMany({
+      where: { userId },
+      select: pantryItemSelect,
+    })
+
+    const nameLower = name.toLowerCase().trim()
+    const nameStripped = this.stripAdjectives(name)
+
+    return all.filter((item) => {
+      const existingLower = item.ingredientName.toLowerCase().trim()
+      // Skip exact match — already handled by duplicate prevention
+      if (existingLower === nameLower) return false
+
+      const existingStripped = this.stripAdjectives(item.ingredientName)
+
+      // Core match: same after stripping adjectives (e.g. "avocado" === "avocado")
+      if (nameStripped && existingStripped && nameStripped === existingStripped) return true
+
+      // Containment: one name fully contains the other
+      if (nameLower.includes(existingLower) || existingLower.includes(nameLower)) return true
+
+      return false
+    })
+  }
+
+  /**
+   * Merge two pantry items: sums their quantities and keeps one record.
+   * The "merge" item is deleted; the "keep" item is updated with the total.
+   */
+  async mergeItems(keepId: string, mergeId: string) {
+    return prisma.$transaction(async (tx) => {
+      const [keep, merge] = await Promise.all([
+        tx.pantryItem.findUnique({ where: { id: keepId }, select: pantryItemSelect }),
+        tx.pantryItem.findUnique({ where: { id: mergeId }, select: pantryItemSelect }),
+      ])
+
+      if (!keep || !merge) throw new Error('One or both items not found')
+
+      // Sum quantities only when both have a value; otherwise keep whichever exists
+      const newQty =
+        keep.quantity !== null && merge.quantity !== null
+          ? Number(keep.quantity) + Number(merge.quantity)
+          : keep.quantity !== null
+          ? Number(keep.quantity)
+          : merge.quantity !== null
+          ? Number(merge.quantity)
+          : null
+
+      await tx.pantryItem.delete({ where: { id: mergeId } })
+
+      return tx.pantryItem.update({
+        where: { id: keepId },
+        data: { quantity: newQty },
+        select: pantryItemSelect,
+      })
+    })
   }
 
   /**

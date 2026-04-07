@@ -329,6 +329,35 @@ export class RecipeRepository {
   }
 
   /**
+   * Find a recipe by exact title (case-insensitive) for a given user.
+   * Used by AI meal plan generation to reuse an existing recipe
+   * instead of generating a duplicate.
+   */
+  async findByTitle(title: string, userId: string) {
+    return prisma.recipe.findFirst({
+      where: {
+        title: { equals: title, mode: 'insensitive' },
+        createdByUserId: userId,
+      },
+      select: { id: true, title: true },
+    })
+  }
+
+  /**
+   * Get all recipe titles created by a user.
+   * Injected into the meal plan AI prompt so it can prefer
+   * dishes the user already has in their library.
+   */
+  async findAllTitles(userId: string): Promise<string[]> {
+    const recipes = await prisma.recipe.findMany({
+      where: { createdByUserId: userId },
+      select: { title: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    return recipes.map((r) => r.title)
+  }
+
+  /**
    * Check if a recipe belongs to a user
    * Used to authorise update/delete operations
    */

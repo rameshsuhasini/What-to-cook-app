@@ -1,0 +1,490 @@
+'use client'
+
+import './recipes.css'
+import { useState, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Search, Sparkles, X, Heart, Clock, Flame, Loader2,
+  ChefHat, UtensilsCrossed,
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { recipeApi, Recipe, DietType } from '@/services/recipe.service'
+
+// ── Constants ─────────────────────────────────────────────
+
+const DIET_OPTIONS: { value: DietType | ''; label: string }[] = [
+  { value: '',             label: 'All diets' },
+  { value: 'NONE',        label: 'No restriction' },
+  { value: 'VEGETARIAN',  label: 'Vegetarian' },
+  { value: 'VEGAN',       label: 'Vegan' },
+  { value: 'KETO',        label: 'Keto' },
+  { value: 'PALEO',       label: 'Paleo' },
+  { value: 'GLUTEN_FREE', label: 'Gluten-free' },
+  { value: 'DAIRY_FREE',  label: 'Dairy-free' },
+  { value: 'HALAL',       label: 'Halal' },
+  { value: 'KOSHER',      label: 'Kosher' },
+]
+
+const DIET_LABELS: Record<DietType, string> = {
+  NONE:       'Standard',
+  VEGETARIAN: 'Vegetarian',
+  VEGAN:      'Vegan',
+  KETO:       'Keto',
+  PALEO:      'Paleo',
+  GLUTEN_FREE:'Gluten-free',
+  DAIRY_FREE: 'Dairy-free',
+  HALAL:      'Halal',
+  KOSHER:     'Kosher',
+}
+
+const CUISINE_OPTIONS = [
+  '', 'Italian', 'Asian', 'Mexican', 'Mediterranean',
+  'Indian', 'American', 'French', 'Japanese', 'Thai',
+  'Greek', 'Middle Eastern', 'British',
+]
+
+// ── Generate modal ────────────────────────────────────────
+
+interface GenerateForm {
+  prompt: string
+  cuisinePreference: string
+  maxCookTimeMinutes: string
+  servings: string
+}
+
+function GenerateModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void
+  onSuccess: (recipe: Recipe) => void
+}) {
+  const [form, setForm] = useState<GenerateForm>({
+    prompt: '',
+    cuisinePreference: '',
+    maxCookTimeMinutes: '',
+    servings: '',
+  })
+  const [error, setError] = useState('')
+
+  const { mutate: generate, isPending } = useMutation({
+    mutationFn: () =>
+      recipeApi.generateRecipe({
+        prompt: form.prompt.trim(),
+        cuisinePreference: form.cuisinePreference || undefined,
+        maxCookTimeMinutes: form.maxCookTimeMinutes
+          ? Number(form.maxCookTimeMinutes)
+          : undefined,
+        servings: form.servings ? Number(form.servings) : undefined,
+      }),
+    onSuccess: (recipe) => {
+      onSuccess(recipe)
+    },
+    onError: (err: any) => {
+      setError(
+        err?.response?.data?.message ??
+          'Failed to generate recipe. Please try again.'
+      )
+    },
+  })
+
+  const set = (key: keyof GenerateForm, val: string) =>
+    setForm((f) => ({ ...f, [key]: val }))
+
+  return (
+    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <motion.div
+        className="generate-modal"
+        initial={{ opacity: 0, scale: 0.96, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 16 }}
+        transition={{ duration: 0.22 }}
+      >
+        <div className="modal-header">
+          <div className="modal-title">
+            <div className="ai-icon"><Sparkles size={16} /></div>
+            <h2>AI Recipe Generator</h2>
+          </div>
+          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div className="modal-body">
+          <div className="modal-field">
+            <label>What would you like to cook? *</label>
+            <textarea
+              placeholder="e.g. a healthy high-protein dinner, quick pasta with chicken, vegan chocolate dessert…"
+              value={form.prompt}
+              onChange={(e) => set('prompt', e.target.value)}
+            />
+          </div>
+
+          <div className="modal-grid">
+            <div className="modal-field">
+              <label>Cuisine preference</label>
+              <select value={form.cuisinePreference} onChange={(e) => set('cuisinePreference', e.target.value)}>
+                {CUISINE_OPTIONS.map((c) => (
+                  <option key={c} value={c}>{c || 'Any cuisine'}</option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-field">
+              <label>Max cook time (mins)</label>
+              <input
+                type="number"
+                min={5}
+                max={480}
+                placeholder="e.g. 30"
+                value={form.maxCookTimeMinutes}
+                onChange={(e) => set('maxCookTimeMinutes', e.target.value)}
+              />
+            </div>
+            <div className="modal-field">
+              <label>Servings</label>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                placeholder="e.g. 4"
+                value={form.servings}
+                onChange={(e) => set('servings', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="modal-error">{error}</p>}
+
+        <div className="modal-footer">
+          <button className="modal-cancel-btn" onClick={onClose}>Cancel</button>
+          <button
+            className="modal-generate-btn"
+            onClick={() => generate()}
+            disabled={isPending || !form.prompt.trim()}
+          >
+            {isPending ? <Loader2 size={15} className="spin-icon" /> : <Sparkles size={15} />}
+            {isPending ? 'Generating…' : 'Generate Recipe'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ── Recipe card ───────────────────────────────────────────
+
+function RecipeCard({
+  recipe,
+  onClick,
+  onToggleSave,
+}: {
+  recipe: Recipe
+  onClick: () => void
+  onToggleSave: (e: React.MouseEvent) => void
+}) {
+  const totalMins =
+    (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0)
+
+  return (
+    <motion.div
+      className="recipe-card"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      onClick={onClick}
+    >
+      <div className="card-img-wrap">
+        {recipe.imageUrl ? (
+          <img src={recipe.imageUrl} alt={recipe.title} className="card-img" />
+        ) : (
+          <div className="card-img-placeholder">
+            {recipe.cuisine === 'Italian' ? '🍝'
+              : recipe.cuisine === 'Asian' || recipe.cuisine === 'Japanese' ? '🍜'
+              : recipe.cuisine === 'Mexican' ? '🌮'
+              : recipe.cuisine === 'Indian' ? '🍛'
+              : recipe.cuisine === 'Mediterranean' || recipe.cuisine === 'Greek' ? '🥗'
+              : '🍽️'}
+          </div>
+        )}
+
+        {recipe.isAiGenerated && (
+          <div className="ai-badge"><Sparkles size={10} />AI</div>
+        )}
+
+        <button
+          className={`card-save-btn ${recipe.isSaved ? 'saved' : ''}`}
+          onClick={onToggleSave}
+          title={recipe.isSaved ? 'Remove from saved' : 'Save recipe'}
+        >
+          <Heart size={14} fill={recipe.isSaved ? 'white' : 'none'} />
+        </button>
+      </div>
+
+      <div className="card-body">
+        <span className="card-diet-tag">{DIET_LABELS[recipe.dietType]}</span>
+        <h3 className="card-title">{recipe.title}</h3>
+        {recipe.description && (
+          <p className="card-desc">{recipe.description}</p>
+        )}
+        <div className="card-meta">
+          {totalMins > 0 && (
+            <span className="card-meta-item">
+              <Clock size={12} />{totalMins}m
+            </span>
+          )}
+          {recipe.calories && (
+            <span className="card-meta-item">
+              <Flame size={12} />{recipe.calories} kcal
+            </span>
+          )}
+          {recipe.cuisine && (
+            <span className="card-cuisine">{recipe.cuisine}</span>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────
+
+type Tab = 'all' | 'saved'
+
+export default function RecipesPage() {
+  const router = useRouter()
+  const queryClient = useQueryClient()
+
+  const [tab, setTab] = useState<Tab>('all')
+  const [search, setSearch] = useState('')
+  const [dietType, setDietType] = useState<DietType | ''>('')
+  const [cuisine, setCuisine] = useState('')
+  const [page, setPage] = useState(1)
+  const [showGenerateModal, setShowGenerateModal] = useState(false)
+
+  // All recipes query
+  const { data, isLoading } = useQuery({
+    queryKey: ['recipes', { page, search, dietType, cuisine }],
+    queryFn: () =>
+      recipeApi.getRecipes({
+        page,
+        limit: 12,
+        search: search || undefined,
+        dietType: (dietType as DietType) || undefined,
+        cuisine: cuisine || undefined,
+      }),
+    enabled: tab === 'all',
+  })
+
+  // Saved recipes query
+  const { data: savedData, isLoading: savedLoading } = useQuery({
+    queryKey: ['recipes-saved'],
+    queryFn: recipeApi.getSavedRecipes,
+    enabled: tab === 'saved',
+  })
+
+  // Optimistically toggle save
+  const { mutate: toggleSave } = useMutation({
+    mutationFn: ({ id, isSaved }: { id: string; isSaved: boolean }) =>
+      isSaved ? recipeApi.unsaveRecipe(id) : recipeApi.saveRecipe(id),
+    onMutate: async ({ id, isSaved }) => {
+      await queryClient.cancelQueries({ queryKey: ['recipes'] })
+      // Optimistic update — flip isSaved flag in list cache
+      queryClient.setQueriesData<{ recipes: Recipe[]; pagination: any }>(
+        { queryKey: ['recipes'] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            recipes: old.recipes.map((r) =>
+              r.id === id ? { ...r, isSaved: !isSaved } : r
+            ),
+          }
+        }
+      )
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipes'] })
+      queryClient.invalidateQueries({ queryKey: ['recipes-saved'] })
+    },
+  })
+
+  const handleToggleSave = useCallback(
+    (e: React.MouseEvent, recipe: Recipe) => {
+      e.stopPropagation()
+      toggleSave({ id: recipe.id, isSaved: recipe.isSaved ?? false })
+    },
+    [toggleSave]
+  )
+
+  const handleTabChange = (t: Tab) => {
+    setTab(t)
+    setPage(1)
+  }
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val)
+    setPage(1)
+  }
+
+  const handleGenerateSuccess = (recipe: Recipe) => {
+    setShowGenerateModal(false)
+    router.push(`/recipes/${recipe.id}`)
+  }
+
+  // Decide what to render
+  const recipes = tab === 'all' ? data?.recipes ?? [] : savedData ?? []
+  const pagination = tab === 'all' ? data?.pagination : null
+  const loading = tab === 'all' ? isLoading : savedLoading
+
+  return (
+    <div className="recipes-root">
+      {/* ── Header ── */}
+      <motion.div
+        className="recipes-header"
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <div className="recipes-header-text">
+          <h1>Recipes</h1>
+          <p>Discover dishes, or let AI create something perfect for you.</p>
+        </div>
+        <button className="generate-btn" onClick={() => setShowGenerateModal(true)}>
+          <Sparkles size={16} />
+          Generate with AI
+        </button>
+      </motion.div>
+
+      {/* ── Tabs ── */}
+      <div className="recipes-tabs">
+        <button
+          className={`tab-btn ${tab === 'all' ? 'active' : ''}`}
+          onClick={() => handleTabChange('all')}
+        >
+          All Recipes
+        </button>
+        <button
+          className={`tab-btn ${tab === 'saved' ? 'active' : ''}`}
+          onClick={() => handleTabChange('saved')}
+        >
+          Saved
+        </button>
+      </div>
+
+      {/* ── Toolbar ── */}
+      {tab === 'all' && (
+        <div className="recipes-toolbar">
+          <div className="search-wrap">
+            <Search size={15} />
+            <input
+              className="search-input"
+              placeholder="Search recipes…"
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
+          </div>
+          <select
+            className="filter-select"
+            value={dietType}
+            onChange={(e) => { setDietType(e.target.value as DietType | ''); setPage(1) }}
+          >
+            {DIET_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <select
+            className="filter-select"
+            value={cuisine}
+            onChange={(e) => { setCuisine(e.target.value); setPage(1) }}
+          >
+            {CUISINE_OPTIONS.map((c) => (
+              <option key={c} value={c}>{c || 'All cuisines'}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* ── Content ── */}
+      {loading ? (
+        <div className="recipes-loading">
+          <Loader2 size={28} className="spin-icon" />
+        </div>
+      ) : recipes.length === 0 ? (
+        <div className="recipes-empty">
+          {tab === 'saved' ? (
+            <>
+              <UtensilsCrossed size={40} strokeWidth={1.2} />
+              <p>No saved recipes yet. Tap the heart on any recipe to save it.</p>
+            </>
+          ) : (
+            <>
+              <ChefHat size={40} strokeWidth={1.2} />
+              <p>No recipes found. Try adjusting your filters or generate one with AI.</p>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="recipe-grid">
+          {recipes.map((recipe) => (
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              onClick={() => router.push(`/recipes/${recipe.id}`)}
+              onToggleSave={(e) => handleToggleSave(e, recipe)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Pagination ── */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="pagination">
+          <button
+            className="page-btn"
+            disabled={!pagination.hasPrev}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            ←
+          </button>
+          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+            .filter((p) => Math.abs(p - page) <= 2 || p === 1 || p === pagination.totalPages)
+            .reduce<(number | '…')[]>((acc, p, idx, arr) => {
+              if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('…')
+              acc.push(p)
+              return acc
+            }, [])
+            .map((p, idx) =>
+              p === '…' ? (
+                <span key={`ellipsis-${idx}`} className="page-info">…</span>
+              ) : (
+                <button
+                  key={p}
+                  className={`page-btn ${p === page ? 'active' : ''}`}
+                  onClick={() => setPage(p as number)}
+                >
+                  {p}
+                </button>
+              )
+            )}
+          <button
+            className="page-btn"
+            disabled={!pagination.hasNext}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            →
+          </button>
+        </div>
+      )}
+
+      {/* ── AI Generate Modal ── */}
+      <AnimatePresence>
+        {showGenerateModal && (
+          <GenerateModal
+            onClose={() => setShowGenerateModal(false)}
+            onSuccess={handleGenerateSuccess}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}

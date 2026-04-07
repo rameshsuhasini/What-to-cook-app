@@ -76,6 +76,33 @@ router.post(
   pantryController.bulkAddPantryItems.bind(pantryController)
 )
 
+// ── GET /api/pantry/check-similar ───────
+// Must be before /:id
+router.get(
+  '/check-similar',
+  authenticate,
+  [
+    query('name')
+      .notEmpty().withMessage('name query param is required')
+      .isLength({ max: 200 }),
+  ],
+  validate,
+  pantryController.checkSimilar.bind(pantryController)
+)
+
+// ── POST /api/pantry/merge ───────────────
+// Must be before /:id
+router.post(
+  '/merge',
+  authenticate,
+  [
+    body('keepId').notEmpty().withMessage('keepId is required'),
+    body('mergeId').notEmpty().withMessage('mergeId is required'),
+  ],
+  validate,
+  pantryController.mergeItems.bind(pantryController)
+)
+
 // ── DELETE /api/pantry/clear ─────────────
 // Must be before /:id
 router.delete(

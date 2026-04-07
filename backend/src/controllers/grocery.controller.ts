@@ -136,6 +136,29 @@ export class GroceryController {
   }
 
   /**
+   * DELETE /api/groceries/:id
+   * Protected — deletes an entire grocery list and all its items
+   */
+  async deleteList(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId
+      const id = req.params.id as string
+      await groceryService.deleteList(userId, id)
+
+      res.status(200).json({
+        success: true,
+        data: { message: 'Grocery list deleted' },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
    * PUT /api/groceries/:id/check-all
    * Protected — checks or unchecks all items in a list
    */
