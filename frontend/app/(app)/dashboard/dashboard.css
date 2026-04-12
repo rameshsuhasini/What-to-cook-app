@@ -2,52 +2,6 @@
    Dashboard CSS — What to Cook?
    ───────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-:root {
-  --teal-50:  #e1f5ee;
-  --teal-100: #9fe1cb;
-  --teal-200: #5dcaa5;
-  --teal-400: #1d9e75;
-  --teal-600: #0f6e56;
-  --teal-800: #085041;
-
-  --coral-50:  #faece7;
-  --coral-100: #f5c4b3;
-  --coral-200: #f0997b;
-  --coral-400: #d85a30;
-  --coral-600: #993c1d;
-
-  --amber-50:  #faeeda;
-  --amber-400: #ba7517;
-  --amber-600: #854f0b;
-
-  --blue-50:  #e6f1fb;
-  --blue-400: #378add;
-  --blue-600: #185fa5;
-
-  --sand-50:  #faf9f6;
-  --sand-100: #f2f0eb;
-  --sand-200: #e4e0d8;
-
-  --txt:  #1a1a18;
-  --txt2: #5f5e5a;
-  --txt3: #8a8880;
-
-  --card-bg: white;
-  --card-border: rgba(0,0,0,0.07);
-  --card-shadow: 0 2px 16px rgba(0,0,0,0.06);
-
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-
-  --fd: 'Playfair Display', Georgia, serif;
-  --fb: 'DM Sans', system-ui, sans-serif;
-
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: var(--fb);
@@ -58,9 +12,9 @@ body {
 
 /* ── Root ──────────────────────────────── */
 .dash-root {
-  max-width: 1200px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: var(--page-padding) var(--page-padding) var(--page-padding-bottom);
 }
 
 /* ── Header ────────────────────────────── */
@@ -87,6 +41,20 @@ body {
   color: var(--txt);
   letter-spacing: -0.02em;
   line-height: 1.1;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 10px;
+}
+
+.dash-name::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 72px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--teal-400), transparent);
 }
 
 .dash-date {
@@ -147,6 +115,26 @@ body {
 .card-link:hover { color: var(--teal-600); }
 
 /* ── Section label ─────────────────────── */
+.section-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.section-label-row .section-label {
+  margin-bottom: 0;
+}
+
+.set-goals-link {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--teal-400);
+  text-decoration: none;
+  transition: color 150ms;
+}
+.set-goals-link:hover { color: var(--teal-600); }
+
 .section-label {
   display: flex;
   align-items: center;
@@ -563,10 +551,12 @@ body {
 .empty-cta:hover { text-decoration: underline; }
 
 /* ── Responsive ────────────────────────── */
+@media (max-width: 1100px) {
+  .nutrition-cards { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 900px) {
-  .dash-grid {
-    grid-template-columns: 1fr;
-  }
+  .dash-grid { grid-template-columns: 1fr; }
   .nutrition-section,
   .weight-section,
   .meals-section,
@@ -574,14 +564,18 @@ body {
   .actions-section {
     grid-column: 1 / -1;
   }
-  .nutrition-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .nutrition-cards { grid-template-columns: repeat(2, 1fr); }
+  .quick-actions   { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 560px) {
-  .dash-root { padding: 1.25rem 1rem 3rem; }
+  .dash-root { padding: 1rem 1rem 5rem; }
   .dash-name { font-size: 1.5rem; }
   .nutrition-cards { grid-template-columns: 1fr 1fr; }
-  .quick-actions { grid-template-columns: 1fr 1fr; }
+  .quick-actions   { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 380px) {
+  .nutrition-cards { grid-template-columns: 1fr; }
+  .quick-actions   { grid-template-columns: 1fr; }
 }

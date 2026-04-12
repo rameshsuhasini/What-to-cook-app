@@ -23,6 +23,7 @@
     "@anthropic-ai/sdk": "^0.80.0",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
+    "@vercel/blob": "^2.3.3",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

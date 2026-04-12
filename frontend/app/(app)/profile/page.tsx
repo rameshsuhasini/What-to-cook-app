@@ -130,7 +130,8 @@ export default function ProfilePage() {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  const avatarSrc = avatarPreview ?? (profile?.avatarUrl ? `${API_URL}${profile.avatarUrl}` : null)
+  // avatarUrl from Vercel Blob is already a full CDN URL — use as-is
+  const avatarSrc = avatarPreview ?? profile?.avatarUrl ?? null
 
   if (isLoading) {
     return (

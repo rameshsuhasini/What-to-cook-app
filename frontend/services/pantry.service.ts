@@ -1,4 +1,5 @@
 import api from '@/lib/axios'
+import type { AIPantrySuggestions } from '@/services/ai.service'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -83,11 +84,22 @@ export const pantryApi = {
   },
 
   clearPantry: async (): Promise<void> => {
-    await api.delete('/pantry')
+    await api.delete('/pantry/clear')
   },
 
   getIngredientNames: async (): Promise<string[]> => {
     const res = await api.get('/pantry/ingredients')
     return res.data.data.ingredients
   },
+
+  getSuggestions: async (opts?: {
+    maxCookTimeMinutes?: number
+    mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK'
+  }): Promise<AIPantrySuggestions> => {
+    const res = await api.post('/ai/pantry-suggestions', opts ?? {})
+    return res.data.data.suggestions
+  },
 }
+
+// Re-export from ai.service so consumers don't need two imports
+export type { PantryRecipeSuggestion, AIPantrySuggestions } from '@/services/ai.service'

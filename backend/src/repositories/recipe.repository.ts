@@ -6,7 +6,7 @@
 // writes must succeed or fail together.
 // ─────────────────────────────────────────
 
-import { DietType, Prisma } from '@prisma/client'
+import { DietType, MealType, Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import {
   CreateRecipeDTO,
@@ -29,6 +29,7 @@ const recipeWithRelations = {
   fat: true,
   cuisine: true,
   dietType: true,
+  mealType: true,
   isAiGenerated: true,
   createdByUserId: true,
   createdAt: true,
@@ -62,9 +63,11 @@ export class RecipeRepository {
       limit = 12,
       search,
       dietType,
+      mealType,
       cuisine,
       maxCalories,
       minProtein,
+      maxCookTime,
       isAiGenerated,
     } = query
 
@@ -80,10 +83,24 @@ export class RecipeRepository {
         ],
       }),
       ...(dietType && { dietType }),
+      ...(mealType && { mealType }),
       ...(cuisine && { cuisine: { contains: cuisine, mode: 'insensitive' } }),
       ...(maxCalories && { calories: { lte: maxCalories } }),
       ...(minProtein && { protein: { gte: minProtein } }),
       ...(isAiGenerated !== undefined && { isAiGenerated }),
+    }
+
+    // Total time filter: prep + cook <= maxCookTime
+    // Prisma can't express a sum of two columns in a where clause,
+    // so we fetch matching IDs via raw SQL and inject as an IN filter.
+    if (maxCookTime) {
+      const rows = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM recipes
+        WHERE (COALESCE(prep_time_minutes, 0) + COALESCE(cook_time_minutes, 0)) <= ${maxCookTime}
+      `
+      const ids = rows.map((r) => r.id)
+      // Force empty result if nothing matches
+      where.id = { in: ids.length > 0 ? ids : ['__no_match__'] }
     }
 
     // Run count and data queries in parallel for performance
@@ -173,6 +190,7 @@ export class RecipeRepository {
           fat: data.fat,
           cuisine: data.cuisine?.trim(),
           dietType: data.dietType ?? 'NONE',
+          mealType: data.mealType,
           isAiGenerated,
           createdByUserId: userId,
           // Create ingredients and steps in the same transaction

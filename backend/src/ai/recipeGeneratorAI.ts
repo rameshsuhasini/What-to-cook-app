@@ -59,6 +59,7 @@ Respond with this exact JSON schema:
   "fat": number (grams per serving),
   "cuisine": "string",
   "dietType": "NONE|VEGETARIAN|VEGAN|KETO|PALEO|GLUTEN_FREE|DAIRY_FREE|HALAL|KOSHER",
+  "mealType": "BREAKFAST|LUNCH|DINNER|SNACK (pick the most appropriate one)",
   "ingredients": [
     {
       "ingredientName": "string",

@@ -1,51 +1,53 @@
-'use client'
-import '../../auth.css'
-import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { useForm } from 'react-hook-form'
-import axios from 'axios'
-import { Eye, EyeOff, ChefHat, ArrowRight, Loader2 } from 'lucide-react'
-import { useAuthStore } from '@/store/auth.store'
+"use client";
+import "../../auth.css";
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import axios from "axios";
+import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { useAuthStore } from "@/store/auth.store";
+import Image from "next/image";
 
 interface LoginForm {
-  email: string
-  password: string
+  email: string;
+  password: string;
 }
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { setUser } = useAuthStore()
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [serverError, setServerError] = useState('')
+  const router = useRouter();
+  const { setUser } = useAuthStore();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>()
+  } = useForm<LoginForm>();
 
   const onSubmit = async (data: LoginForm) => {
-    setIsLoading(true)
-    setServerError('')
+    setIsLoading(true);
+    setServerError("");
     try {
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
         data,
-        { withCredentials: true }
-      )
-      setUser(res.data.data.user)
-      router.push('/dashboard')
+        { withCredentials: true },
+      );
+      setUser(res.data.data.user);
+      router.push("/dashboard");
     } catch (err: any) {
       setServerError(
-        err.response?.data?.message || 'Something went wrong. Please try again.'
-      )
+        err.response?.data?.message ||
+          "Something went wrong. Please try again.",
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-root">
@@ -54,7 +56,7 @@ export default function LoginPage() {
         className="auth-brand"
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.7, ease: 'easeOut' }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
       >
         <BrandPanel />
       </motion.div>
@@ -64,12 +66,17 @@ export default function LoginPage() {
         className="auth-form-panel"
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
+        transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
       >
         <div className="auth-form-container">
           {/* Mobile logo */}
           <div className="auth-mobile-logo">
-            <ChefHat size={28} strokeWidth={1.5} />
+            <Image
+              src="/images/appIcon.png"
+              alt="logo"
+              width={40}
+              height={40}
+            />
             <span>What to Cook?</span>
           </div>
 
@@ -87,12 +94,12 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 placeholder="you@example.com"
-                className={errors.email ? 'input-error' : ''}
-                {...register('email', {
-                  required: 'Email is required',
+                className={errors.email ? "input-error" : ""}
+                {...register("email", {
+                  required: "Email is required",
                   pattern: {
                     value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: 'Invalid email address',
+                    message: "Invalid email address",
                   },
                 })}
               />
@@ -105,26 +112,23 @@ export default function LoginPage() {
             <div className="field-group">
               <div className="label-row">
                 <label htmlFor="password">Password</label>
-                <Link href="/forgot-password" className="forgot-link">
-                  Forgot password?
-                </Link>
               </div>
               <div className="input-wrapper">
                 <input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className={errors.password ? 'input-error' : ''}
-                  {...register('password', {
-                    required: 'Password is required',
+                  className={errors.password ? "input-error" : ""}
+                  {...register("password", {
+                    required: "Password is required",
                   })}
                 />
                 <button
                   type="button"
                   className="toggle-password"
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -164,72 +168,42 @@ export default function LoginPage() {
           </form>
 
           <p className="auth-switch">
-            New here?{' '}
-            <Link href="/signup">Create a free account</Link>
+            New here? <Link href="/signup">Create a free account</Link>
           </p>
         </div>
       </motion.div>
     </div>
-  )
+  );
 }
 
 function BrandPanel() {
-  const features = [
-    { icon: '🍳', label: 'AI Recipe Generator' },
-    { icon: '📅', label: 'Weekly Meal Planner' },
-    { icon: '🛒', label: 'Smart Grocery Lists' },
-    { icon: '📊', label: 'Nutrition Tracking' },
-  ]
-
   return (
     <div className="brand-inner">
+      {/* Logo */}
       <div className="brand-logo">
-        <ChefHat size={36} strokeWidth={1.5} />
+        <Image src="/images/appIcon.png" alt="What to Cook?" width={44} height={44} style={{ objectFit: 'contain', borderRadius: 8 }} />
         <span>What to Cook?</span>
       </div>
 
-      <div className="brand-hero">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
-        >
-          Your AI-powered kitchen companion
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45, duration: 0.6 }}
-        >
-          Plan meals, discover recipes, and track your nutrition — all personalised to you.
-        </motion.p>
-      </div>
-
-      <motion.ul
-        className="brand-features"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          visible: { transition: { staggerChildren: 0.1, delayChildren: 0.5 } },
-        }}
+      {/* Headline */}
+      <motion.div
+        className="brand-headline"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.65 }}
       >
-        {features.map((f) => (
-          <motion.li
-            key={f.label}
-            variants={{
-              hidden: { opacity: 0, x: -16 },
-              visible: { opacity: 1, x: 0 },
-            }}
-          >
-            <span className="feature-icon">{f.icon}</span>
-            <span>{f.label}</span>
-          </motion.li>
-        ))}
-      </motion.ul>
+        <h2>
+          Cook something
+          <br />
+          <em>amazing</em> today.
+        </h2>
+        <p>AI-powered recipes, meal planning & nutrition — crafted for you.</p>
+      </motion.div>
 
-      {/* Decorative blobs */}
+      {/* Ambient blobs */}
       <div className="blob blob-1" />
       <div className="blob blob-2" />
+      <div className="blob blob-3" />
     </div>
-  )
+  );
 }

@@ -12,6 +12,7 @@
 import { prisma } from '../lib/prisma'
 import groceryRepository from '../repositories/grocery.repository'
 import pantryRepository from '../repositories/pantry.repository'
+import { aggregateGroceryList } from '../ai/groceryAI'
 import {
   CreateGroceryItemDTO,
   UpdateGroceryItemDTO,
@@ -37,9 +38,9 @@ const CATEGORY_MAP: Record<string, string> = {
   lamb: 'Meat & Seafood', turkey: 'Meat & Seafood', salmon: 'Meat & Seafood',
   tuna: 'Meat & Seafood', shrimp: 'Meat & Seafood', fish: 'Meat & Seafood',
   bacon: 'Meat & Seafood', sausage: 'Meat & Seafood',
-  // Dairy
-  milk: 'Dairy', cheese: 'Dairy', butter: 'Dairy', cream: 'Dairy',
-  yogurt: 'Dairy', egg: 'Dairy', mozzarella: 'Dairy', parmesan: 'Dairy',
+  // Dairy & Eggs
+  milk: 'Dairy & Eggs', cheese: 'Dairy & Eggs', butter: 'Dairy & Eggs', cream: 'Dairy & Eggs',
+  yogurt: 'Dairy & Eggs', egg: 'Dairy & Eggs', mozzarella: 'Dairy & Eggs', parmesan: 'Dairy & Eggs',
   // Pantry
   flour: 'Pantry', sugar: 'Pantry', salt: 'Pantry', chilli: 'Pantry',
   oil: 'Pantry', vinegar: 'Pantry', soy: 'Pantry', sauce: 'Pantry',
@@ -53,7 +54,36 @@ const CATEGORY_MAP: Record<string, string> = {
   cinnamon: 'Spices & Herbs', ginger: 'Spices & Herbs', turmeric: 'Spices & Herbs',
 }
 
+// ── Unit normalisation ───────────────────
+// Maps verbose/plural unit spellings to canonical short forms.
+// Used in BOTH mergeIngredients (AI-generated lists) and
+// addItem (manual adds) so that "grams" and "g" are treated
+// as the same unit throughout.
+
+const UNIT_ALIASES: Record<string, string> = {
+  gram: 'g', grams: 'g',
+  kilogram: 'kg', kilograms: 'kg', kilo: 'kg', kilos: 'kg',
+  milliliter: 'ml', milliliters: 'ml', millilitre: 'ml', millilitres: 'ml',
+  liter: 'l', liters: 'l', litre: 'l', litres: 'l',
+  pound: 'lb', pounds: 'lb', lbs: 'lb',
+  ounce: 'oz', ounces: 'oz',
+  tablespoon: 'tbsp', tablespoons: 'tbsp',
+  teaspoon: 'tsp', teaspoons: 'tsp',
+  piece: 'pcs', pieces: 'pcs', pc: 'pcs',
+  cup: 'cups',
+}
+
 export class GroceryService {
+  /**
+   * Normalise a unit string to its canonical short form.
+   * e.g. "grams" → "g", "Tablespoons" → "tbsp", "" → ""
+   */
+  private normalizeUnit(unit: string | null | undefined): string {
+    if (!unit) return ''
+    const lower = unit.toLowerCase().trim()
+    return UNIT_ALIASES[lower] ?? lower
+  }
+
   /**
    * Infer a grocery category from an ingredient name
    * Falls back to "Other" if no match found
@@ -67,9 +97,67 @@ export class GroceryService {
   }
 
   /**
-   * Merge duplicate ingredients from multiple recipes
+   * Normalize an ingredient name to a canonical form used ONLY for dedup keying.
+   *
+   * Problem: AI generates slightly different names across recipes for the same
+   * ingredient — e.g. "boneless chicken breast", "chicken breast, cubed",
+   * "lean ground turkey (93/7)", "ground turkey (93% lean)", "basil leaves",
+   * "garlic cloves", "bell peppers".
+   * Exact-string keying misses all of these.
+   *
+   * Strategy (order matters):
+   *   1. Lowercase + trim
+   *   2. Strip parenthetical qualifiers:  "(93% lean)" "(cod or tilapia)"
+   *   3. Strip everything after first comma:  ", cubed"  ", low sodium"
+   *   4. Strip standalone leading descriptor words that don't define the
+   *      ingredient's type (boneless, skinless, lean, extra, etc.)
+   *   5. Strip trailing form words:  "leaves", "cloves", "florets", "stalks", "sprigs"
+   *   6. Singularize: strip trailing 's' from last word if len > 3 and not ending 'ss'
+   *      e.g. "peppers" → "pepper", "eggs" → "egg", but NOT "peas" → "pea"
+   *   7. Collapse whitespace
+   */
+  private normalizeIngredientName(name: string): string {
+    const LEADING_DESCRIPTORS = new Set([
+      'boneless', 'skinless', 'lean', 'extra', 'fresh', 'raw',
+      'frozen', 'dried', 'organic', 'baby', 'large', 'small', 'medium',
+      'reduced', 'fat-free', 'low-fat',
+    ])
+    const TRAILING_FORM_WORDS = new Set([
+      'leaves', 'leaf', 'cloves', 'clove', 'florets', 'floret',
+      'stalks', 'stalk', 'sprigs', 'sprig',
+    ])
+
+    let n = name.toLowerCase().trim()
+    // Step 2 — remove parenthetical text
+    n = n.replace(/\([^)]*\)/g, '')
+    // Step 3 — strip from first comma onward
+    n = n.replace(/,.*$/, '')
+    // Step 4 — strip leading single-word descriptors
+    const words = n.trim().split(/\s+/).filter(Boolean)
+    while (words.length > 1 && LEADING_DESCRIPTORS.has(words[0])) {
+      words.shift()
+    }
+    // Step 5 — strip trailing form words (e.g. "basil leaves" → "basil", "garlic cloves" → "garlic")
+    while (words.length > 1 && TRAILING_FORM_WORDS.has(words[words.length - 1])) {
+      words.pop()
+    }
+    // Step 6 — singularize last word (e.g. "peppers" → "pepper", "eggs" → "egg")
+    const last = words[words.length - 1]
+    if (last && last.endsWith('s') && last.length > 3 && !last.endsWith('ss')) {
+      words[words.length - 1] = last.slice(0, -1)
+    }
+    // Step 7 — collapse whitespace
+    return words.join(' ').trim()
+  }
+
+  /**
+   * Merge duplicate ingredients from multiple recipes.
    * Combines quantities where units match,
-   * keeps separate entries where units differ
+   * keeps separate entries where units differ.
+   *
+   * Dedup key uses the *normalized* name so that
+   * "boneless chicken breast", "chicken breast, cubed", and "chicken breast"
+   * all resolve to the same entry.
    */
   private mergeIngredients(
     ingredients: Array<{
@@ -78,21 +166,23 @@ export class GroceryService {
       unit: string | null
     }>
   ): CreateGroceryItemDTO[] {
-    // Key = "ingredientname|unit" for deduplication
+    // Key = "normalized-name|unit"
     const merged = new Map<string, CreateGroceryItemDTO>()
 
     for (const ing of ingredients) {
-      const key = `${ing.ingredientName.toLowerCase().trim()}|${ing.unit?.toLowerCase() ?? ''}`
+      const normalized = this.normalizeIngredientName(ing.ingredientName)
+      const key = `${normalized}|${this.normalizeUnit(ing.unit)}`
 
       if (merged.has(key)) {
         const existing = merged.get(key)!
-        // Add quantities if both are numbers
+        // Sum quantities when both are present
         if (existing.quantity !== undefined && ing.quantity !== null) {
           existing.quantity = (existing.quantity ?? 0) + ing.quantity
         }
       } else {
+        // Use the normalized name as the display name so the list stays clean
         merged.set(key, {
-          ingredientName: ing.ingredientName.trim(),
+          ingredientName: normalized.charAt(0).toUpperCase() + normalized.slice(1),
           quantity: ing.quantity ?? undefined,
           unit: ing.unit ?? undefined,
           category: this.inferCategory(ing.ingredientName),
@@ -173,27 +263,55 @@ export class GroceryService {
 
   /**
    * GENERATE GROCERY LIST FROM MEAL PLAN
-   * Pulls all recipe ingredients from a week's meal plan,
-   * merges duplicates, infers categories, and creates a list.
    *
-   * If a list already exists for this meal plan, it is
-   * deleted and regenerated fresh.
+   * Supports flexible date ranges and two conflict modes:
+   *
+   * mode = 'replace' (default):
+   *   Delete any existing list for this meal plan and generate a
+   *   fresh one from the selected dates.
+   *
+   * mode = 'merge':
+   *   Append to the existing list without deleting it.
+   *   Token-saving optimisation — ingredients already in the list
+   *   skip the AI pipeline entirely; only genuinely new ingredients
+   *   are sent to Claude.
+   *
+   * @param dates - ISO date strings to include ('YYYY-MM-DD').
+   *                If empty / omitted → all items in the meal plan.
    */
   async generateFromMealPlan(
     userId: string,
-    mealPlanId: string
+    mealPlanId: string,
+    options: {
+      dates?: string[]
+      mode?: 'replace' | 'merge'
+    } = {}
   ): Promise<GroceryListGroupedResponse> {
+    const { dates, mode = 'replace' } = options
+
     // Verify meal plan exists and belongs to user
+    // Optionally filter items to only the requested dates
     const mealPlan = await prisma.mealPlan.findUnique({
       where: { id: mealPlanId },
       select: {
         userId: true,
         items: {
+          ...(dates && dates.length > 0
+            ? {
+                where: {
+                  date: {
+                    in: dates.map((d) => {
+                      const [y, m, day] = d.split('-').map(Number)
+                      return new Date(Date.UTC(y, m - 1, day))
+                    }),
+                  },
+                },
+              }
+            : {}),
           select: {
             recipe: {
               select: {
                 title: true,
-                servings: true,
                 ingredients: {
                   select: {
                     ingredientName: true,
@@ -212,64 +330,145 @@ export class GroceryService {
     if (!mealPlan) throw new Error('Meal plan not found')
     if (mealPlan.userId !== userId) throw new Error('Access denied')
 
-    // Collect all ingredients from all recipes in the plan
-    const allIngredients: Array<{
-      ingredientName: string
+    // Collect raw ingredients from the (possibly filtered) items
+    const rawIngredients: Array<{
+      name: string
       quantity: number | null
       unit: string | null
+      recipe: string
     }> = []
 
     for (const item of mealPlan.items) {
+      const recipeTitle = item.recipe?.title ?? item.customMealName ?? 'Unknown recipe'
       if (item.recipe?.ingredients) {
         for (const ing of item.recipe.ingredients) {
-          allIngredients.push({
-            ingredientName: ing.ingredientName,
+          rawIngredients.push({
+            name: ing.ingredientName,
             quantity: ing.quantity ? Number(ing.quantity) : null,
             unit: ing.unit,
+            recipe: recipeTitle,
           })
         }
       }
     }
 
-    if (allIngredients.length === 0) {
+    if (rawIngredients.length === 0) {
       throw new Error(
-        'No ingredients found in this meal plan. Make sure your meals have recipes with ingredients.'
+        'No ingredients found for the selected days. Make sure your meals have recipes with ingredients.'
       )
     }
 
-    // Merge duplicates and infer categories
-    const mergedItems = this.mergeIngredients(allIngredients)
-
-    // Subtract what the user already has in their pantry
-    const pantryItems = await pantryRepository.findAll(userId, { limit: 500 })
-    const pantryNormalized = pantryItems.items.map((p) => ({
-      ingredientName: p.ingredientName,
+    // Fetch pantry so the AI can subtract what's already at home
+    const pantryResult = await pantryRepository.findAll(userId, { limit: 500 })
+    const rawPantry = pantryResult.items.map((p) => ({
+      name: p.ingredientName,
       quantity: p.quantity !== null ? Number(p.quantity) : null,
       unit: p.unit,
     }))
-    const filteredItems = this.subtractPantryItems(mergedItems, pantryNormalized)
 
-    if (filteredItems.length === 0) {
-      throw new Error(
-        'Your pantry already covers all the ingredients needed for this meal plan!'
+    // Get any existing list for this meal plan
+    const existingList = await groceryRepository.findByMealPlan(userId, mealPlanId)
+
+    // ── REPLACE MODE (or no existing list) ──────────────────────────────────
+    if (mode === 'replace' || !existingList) {
+      const filteredItems = await this.runAIPipeline(rawIngredients, rawPantry)
+
+      if (existingList) await groceryRepository.delete(existingList.id)
+      const list = await groceryRepository.create(userId, filteredItems, mealPlanId)
+      return this.groupByCategory(this.sanitizeList(list))
+    }
+
+    // ── MERGE MODE ───────────────────────────────────────────────────────────
+    // Token optimisation: ingredients whose normalised name already appears in
+    // the existing list skip the AI pipeline and go through rule-based merge
+    // only — saving tokens while still summing quantities correctly.
+    const existingNormNames = new Set(
+      existingList.items.map((i) => this.normalizeIngredientName(i.ingredientName))
+    )
+
+    const newRaw = rawIngredients.filter(
+      (i) => !existingNormNames.has(this.normalizeIngredientName(i.name))
+    )
+    const knownRaw = rawIngredients.filter((i) =>
+      existingNormNames.has(this.normalizeIngredientName(i.name))
+    )
+
+    const itemsToAdd: CreateGroceryItemDTO[] = []
+
+    // New ingredients → full AI pipeline (normalize, merge, subtract pantry)
+    if (newRaw.length > 0) {
+      const aiItems = await this.runAIPipeline(newRaw, rawPantry)
+      itemsToAdd.push(...aiItems)
+    }
+
+    // Known ingredients → rule-based merge only (quantity update, no re-subtract)
+    if (knownRaw.length > 0) {
+      const merged = this.mergeIngredients(
+        knownRaw.map((i) => ({ ingredientName: i.name, quantity: i.quantity, unit: i.unit }))
       )
+      itemsToAdd.push(...merged)
     }
 
-    // Delete existing list for this meal plan if one exists
-    const existing = await groceryRepository.findByMealPlan(userId, mealPlanId)
-    if (existing) {
-      await groceryRepository.delete(existing.id)
+    if (itemsToAdd.length === 0) {
+      throw new Error('No new ingredients to add for the selected days.')
     }
 
-    // Create fresh list
-    const list = await groceryRepository.create(userId, filteredItems, mealPlanId)
+    // Add to existing list — addItem handles dedup + quantity summing per item
+    for (const item of itemsToAdd) {
+      await this.addItem(userId, existingList.id, item)
+    }
 
-    return this.groupByCategory(this.sanitizeList(list))
+    return this.getGroceryListById(existingList.id, userId)
+  }
+
+  /**
+   * Run the two-stage AI aggregation pipeline.
+   * Falls back to rule-based merge + pantry subtraction if AI fails.
+   */
+  private async runAIPipeline(
+    rawIngredients: Array<{ name: string; quantity: number | null; unit: string | null; recipe: string }>,
+    rawPantry: Array<{ name: string; quantity: number | null; unit: string | null }>
+  ): Promise<CreateGroceryItemDTO[]> {
+    try {
+      const aiItems = await aggregateGroceryList(rawIngredients, rawPantry)
+      if (aiItems.length === 0) {
+        throw new Error('Your pantry already covers all the ingredients needed!')
+      }
+      return aiItems.map((item) => ({
+        ingredientName: item.ingredientName,
+        quantity: item.quantity ?? undefined,
+        unit: item.unit ?? undefined,
+        category: item.category,
+      }))
+    } catch (aiError) {
+      if (aiError instanceof Error && aiError.message.includes('pantry already covers')) {
+        throw aiError
+      }
+      // AI aggregation failed — fall back to rule-based merge silently
+      const mergedItems = this.mergeIngredients(
+        rawIngredients.map((i) => ({ ingredientName: i.name, quantity: i.quantity, unit: i.unit }))
+      )
+      const subtracted = this.subtractPantryItems(
+        mergedItems,
+        rawPantry.map((p) => ({ ingredientName: p.name, quantity: p.quantity, unit: p.unit }))
+      )
+      if (subtracted.length === 0) {
+        throw new Error('Your pantry already covers all the ingredients needed!')
+      }
+      return subtracted
+    }
   }
 
   /**
    * ADD ITEM TO LIST
-   * Manually add an item to an existing grocery list
+   * Manually add an item to an existing grocery list.
+   *
+   * Dedup logic (mirrors mergeIngredients):
+   *   - Normalise the incoming name and unit
+   *   - Scan every existing item in the list using the same normalisation
+   *   - If a match is found AND both entries have quantities → sum quantities
+   *   - If a match is found but quantities can't be compared → return existing
+   *   - Only insert a new row when there is genuinely no match
    */
   async addItem(
     userId: string,
@@ -279,13 +478,40 @@ export class GroceryService {
     const isOwner = await groceryRepository.isOwner(groceryListId, userId)
     if (!isOwner) throw new Error('Grocery list not found or access denied')
 
-    // Infer category if not provided
-    const itemWithCategory = {
-      ...item,
-      category: item.category ?? this.inferCategory(item.ingredientName),
+    const incomingName = this.normalizeIngredientName(item.ingredientName)
+    const incomingUnit = this.normalizeUnit(item.unit)
+
+    // Load all current items so we can check for duplicates
+    const existingItems = await groceryRepository.findItemsByList(groceryListId)
+
+    const duplicate = existingItems.find((i) =>
+      this.normalizeIngredientName(i.ingredientName) === incomingName &&
+      this.normalizeUnit(i.unit) === incomingUnit
+    )
+
+    if (duplicate) {
+      // Both have numeric quantities — merge them
+      if (
+        duplicate.quantity !== null &&
+        item.quantity !== undefined &&
+        item.quantity !== null
+      ) {
+        const updated = await groceryRepository.updateItem(duplicate.id, {
+          quantity: Number(duplicate.quantity) + item.quantity,
+        })
+        return this.sanitizeItem(updated)
+      }
+      // Can't merge (missing quantity on one side) — return existing entry as-is
+      return this.sanitizeItem(duplicate)
     }
 
-    const created = await groceryRepository.addItem(groceryListId, itemWithCategory)
+    // No duplicate — create a fresh entry, inferring category if not provided
+    const created = await groceryRepository.addItem(groceryListId, {
+      ...item,
+      ingredientName: item.ingredientName.trim(),
+      unit: this.normalizeUnit(item.unit) || item.unit?.trim() || undefined,
+      category: item.category ?? this.inferCategory(item.ingredientName),
+    })
     return this.sanitizeItem(created)
   }
 

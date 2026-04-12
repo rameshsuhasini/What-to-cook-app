@@ -1,29 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-/* ── Tokens ──────────────────────────── */
-:root {
-  --teal-400: #1d9e75;
-  --teal-600: #0f6e56;
-  --coral-400: #d85a30;
-  --amber-400: #d4860a;
-  --sand-50:  #faf9f6;
-  --sand-100: #f2f0eb;
-  --sand-200: #e4e0d8;
-  --text-primary:   #1a1a18;
-  --text-secondary: #5f5e5a;
-  --text-muted:     #8a8880;
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body:    'DM Sans', system-ui, sans-serif;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-}
 
 /* ── Page shell ─────────────────────── */
 .profile-root {
-  padding: 2.5rem;
-  max-width: 860px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
+  padding: var(--page-padding) var(--page-padding) var(--page-padding-bottom);
   font-family: var(--font-body);
 }
 
@@ -38,6 +18,20 @@
   color: var(--text-primary);
   letter-spacing: -0.02em;
   margin-bottom: 0.3rem;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 10px;
+}
+
+.profile-header h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 72px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--teal-400), transparent);
 }
 
 .profile-header p {

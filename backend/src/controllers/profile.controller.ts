@@ -40,7 +40,12 @@ export class ProfileController {
         res.status(400).json({ success: false, message: 'No file uploaded' })
         return
       }
-      const profile = await profileService.updateAvatar(req.user!.userId, file.filename)
+      const profile = await profileService.updateAvatar(
+        req.user!.userId,
+        file.buffer,
+        file.mimetype,
+        file.originalname
+      )
       res.status(200).json({ success: true, data: { profile } })
     } catch (error) {
       next(error)

@@ -1,5 +1,4 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
-import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -29,12 +28,6 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// Serve uploaded files with cross-origin policy so the frontend (port 3000)
-// can load images served from the backend (port 5000)
-app.use('/uploads', (_req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
-  next()
-}, express.static(path.join(process.cwd(), 'uploads')));
 app.use('/api/recipes', recipeRoutes)
 app.use('/api/meal-plans', mealPlanRoutes)
 app.use('/api/ai', aiRoutes)

@@ -11,7 +11,7 @@
 
 import { Request, Response, NextFunction } from 'express'
 import recipeService from '../services/recipe.service'
-import { DietType } from '@prisma/client'
+import { DietType, MealType } from '@prisma/client'
 
 export class RecipeController {
   /**
@@ -33,9 +33,11 @@ export class RecipeController {
         limit: q.limit ? Number(q.limit) : undefined,
         search: q.search,
         dietType: q.dietType as DietType | undefined,
+        mealType: q.mealType as MealType | undefined,
         cuisine: q.cuisine,
         maxCalories: q.maxCalories ? Number(q.maxCalories) : undefined,
         minProtein: q.minProtein ? Number(q.minProtein) : undefined,
+        maxCookTime: q.maxCookTime ? Number(q.maxCookTime) : undefined,
         isAiGenerated:
           q.isAiGenerated !== undefined
             ? q.isAiGenerated === 'true'

@@ -6,10 +6,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Sparkles, X, Heart, Clock, Flame, Loader2,
-  ChefHat, UtensilsCrossed,
+  ChefHat, UtensilsCrossed, Users, Apple, CalendarPlus,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { recipeApi, Recipe, DietType } from '@/services/recipe.service'
+import { recipeApi, Recipe, DietType, MealType } from '@/services/recipe.service'
+import PantrySuggestionsModal from '@/components/PantrySuggestionsModal'
+import AddToPlanModal from '@/components/AddToPlanModal'
 
 // ── Constants ─────────────────────────────────────────────
 
@@ -26,22 +28,35 @@ const DIET_OPTIONS: { value: DietType | ''; label: string }[] = [
   { value: 'KOSHER',      label: 'Kosher' },
 ]
 
-const DIET_LABELS: Record<DietType, string> = {
-  NONE:       'Standard',
-  VEGETARIAN: 'Vegetarian',
-  VEGAN:      'Vegan',
-  KETO:       'Keto',
-  PALEO:      'Paleo',
-  GLUTEN_FREE:'Gluten-free',
-  DAIRY_FREE: 'Dairy-free',
-  HALAL:      'Halal',
-  KOSHER:     'Kosher',
+// NONE → no badge; all others get a label + color class
+const DIET_BADGE: Partial<Record<DietType, { label: string; cls: string }>> = {
+  VEGETARIAN:  { label: 'Vegetarian',  cls: 'badge-teal' },
+  VEGAN:       { label: 'Vegan',       cls: 'badge-teal badge-teal--dark' },
+  KETO:        { label: 'Keto',        cls: 'badge-amber' },
+  PALEO:       { label: 'Paleo',       cls: 'badge-amber' },
+  GLUTEN_FREE: { label: 'Gluten Free', cls: 'badge-blue' },
+  DAIRY_FREE:  { label: 'Dairy Free',  cls: 'badge-blue' },
+  HALAL:       { label: 'Halal',       cls: 'badge-coral' },
+  KOSHER:      { label: 'Kosher',      cls: 'badge-coral' },
 }
 
 const CUISINE_OPTIONS = [
   '', 'Italian', 'Asian', 'Mexican', 'Mediterranean',
   'Indian', 'American', 'French', 'Japanese', 'Thai',
   'Greek', 'Middle Eastern', 'British',
+]
+
+const MEAL_TYPE_CHIPS: { value: MealType; label: string; emoji: string }[] = [
+  { value: 'BREAKFAST', label: 'Breakfast', emoji: '🌅' },
+  { value: 'LUNCH',     label: 'Lunch',     emoji: '☀️' },
+  { value: 'DINNER',    label: 'Dinner',    emoji: '🌙' },
+  { value: 'SNACK',     label: 'Snack',     emoji: '🍎' },
+]
+
+const TIME_CHIPS: { value: number; label: string }[] = [
+  { value: 15, label: '≤ 15 min' },
+  { value: 30, label: '≤ 30 min' },
+  { value: 60, label: '≤ 1 hour' },
 ]
 
 // ── Generate modal ────────────────────────────────────────
@@ -177,10 +192,12 @@ function RecipeCard({
   recipe,
   onClick,
   onToggleSave,
+  onAddToPlan,
 }: {
   recipe: Recipe
   onClick: () => void
   onToggleSave: (e: React.MouseEvent) => void
+  onAddToPlan: (e: React.MouseEvent) => void
 }) {
   const totalMins =
     (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0)
@@ -198,12 +215,19 @@ function RecipeCard({
           <img src={recipe.imageUrl} alt={recipe.title} className="card-img" />
         ) : (
           <div className="card-img-placeholder">
-            {recipe.cuisine === 'Italian' ? '🍝'
-              : recipe.cuisine === 'Asian' || recipe.cuisine === 'Japanese' ? '🍜'
-              : recipe.cuisine === 'Mexican' ? '🌮'
-              : recipe.cuisine === 'Indian' ? '🍛'
-              : recipe.cuisine === 'Mediterranean' || recipe.cuisine === 'Greek' ? '🥗'
-              : '🍽️'}
+            <span className="placeholder-emoji">
+              {recipe.cuisine === 'Italian' ? '🍝'
+                : recipe.cuisine === 'Asian' || recipe.cuisine === 'Japanese' ? '🍜'
+                : recipe.cuisine === 'Mexican' ? '🌮'
+                : recipe.cuisine === 'Indian' ? '🍛'
+                : recipe.cuisine === 'Mediterranean' || recipe.cuisine === 'Greek' ? '🥗'
+                : recipe.dietType === 'VEGAN' || recipe.dietType === 'VEGETARIAN' ? '🥗'
+                : recipe.dietType === 'KETO' || recipe.dietType === 'PALEO' ? '🥩'
+                : '🍽️'}
+            </span>
+            <span className="placeholder-label">
+              {recipe.cuisine || DIET_BADGE[recipe.dietType]?.label || 'Recipe'}
+            </span>
           </div>
         )}
 
@@ -211,18 +235,31 @@ function RecipeCard({
           <div className="ai-badge"><Sparkles size={10} />AI</div>
         )}
 
-        <button
-          className={`card-save-btn ${recipe.isSaved ? 'saved' : ''}`}
-          onClick={onToggleSave}
-          title={recipe.isSaved ? 'Remove from saved' : 'Save recipe'}
-        >
-          <Heart size={14} fill={recipe.isSaved ? 'white' : 'none'} />
-        </button>
+        <div className="card-overlay-actions">
+          <button
+            className="card-plan-btn"
+            onClick={onAddToPlan}
+            title="Add to meal plan"
+          >
+            <CalendarPlus size={13} />
+          </button>
+          <button
+            className={`card-save-btn ${recipe.isSaved ? 'saved' : ''}`}
+            onClick={onToggleSave}
+            title={recipe.isSaved ? 'Remove from saved' : 'Save recipe'}
+          >
+            <Heart size={14} fill={recipe.isSaved ? 'white' : 'none'} />
+          </button>
+        </div>
       </div>
 
       <div className="card-body">
-        <span className="card-diet-tag">{DIET_LABELS[recipe.dietType]}</span>
         <h3 className="card-title">{recipe.title}</h3>
+        {DIET_BADGE[recipe.dietType] && (
+          <span className={`card-diet-tag ${DIET_BADGE[recipe.dietType]!.cls}`}>
+            {DIET_BADGE[recipe.dietType]!.label}
+          </span>
+        )}
         {recipe.description && (
           <p className="card-desc">{recipe.description}</p>
         )}
@@ -237,10 +274,25 @@ function RecipeCard({
               <Flame size={12} />{recipe.calories} kcal
             </span>
           )}
-          {recipe.cuisine && (
-            <span className="card-cuisine">{recipe.cuisine}</span>
+          {recipe.servings && (
+            <span className="card-meta-item">
+              <Users size={12} />{recipe.servings}
+            </span>
           )}
         </div>
+        {(recipe.protein || recipe.carbs || recipe.fat) && (
+          <div className="card-macros">
+            {recipe.protein != null && (
+              <span className="card-macro card-macro--protein">P {recipe.protein}g</span>
+            )}
+            {recipe.carbs != null && (
+              <span className="card-macro card-macro--carbs">C {recipe.carbs}g</span>
+            )}
+            {recipe.fat != null && (
+              <span className="card-macro card-macro--fat">F {recipe.fat}g</span>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   )
@@ -257,19 +309,25 @@ export default function RecipesPage() {
   const [tab, setTab] = useState<Tab>('all')
   const [search, setSearch] = useState('')
   const [dietType, setDietType] = useState<DietType | ''>('')
+  const [mealType, setMealType] = useState<MealType | ''>('')
+  const [maxCookTime, setMaxCookTime] = useState<number | ''>('')
   const [cuisine, setCuisine] = useState('')
   const [page, setPage] = useState(1)
   const [showGenerateModal, setShowGenerateModal] = useState(false)
+  const [showPantryModal, setShowPantryModal] = useState(false)
+  const [planRecipe, setPlanRecipe] = useState<{ id: string; title: string } | null>(null)
 
   // All recipes query
   const { data, isLoading } = useQuery({
-    queryKey: ['recipes', { page, search, dietType, cuisine }],
+    queryKey: ['recipes', { page, search, dietType, mealType, maxCookTime, cuisine }],
     queryFn: () =>
       recipeApi.getRecipes({
         page,
         limit: 12,
         search: search || undefined,
         dietType: (dietType as DietType) || undefined,
+        mealType: (mealType as MealType) || undefined,
+        maxCookTime: (maxCookTime as number) || undefined,
         cuisine: cuisine || undefined,
       }),
     enabled: tab === 'all',
@@ -349,10 +407,16 @@ export default function RecipesPage() {
           <h1>Recipes</h1>
           <p>Discover dishes, or let AI create something perfect for you.</p>
         </div>
-        <button className="generate-btn" onClick={() => setShowGenerateModal(true)}>
-          <Sparkles size={16} />
-          Generate with AI
-        </button>
+        <div className="recipes-header-actions">
+          <button className="pantry-btn" onClick={() => setShowPantryModal(true)}>
+            <Apple size={16} />
+            What can I cook?
+          </button>
+          <button className="generate-btn" onClick={() => setShowGenerateModal(true)}>
+            <Sparkles size={16} />
+            Generate with AI
+          </button>
+        </div>
       </motion.div>
 
       {/* ── Tabs ── */}
@@ -373,34 +437,80 @@ export default function RecipesPage() {
 
       {/* ── Toolbar ── */}
       {tab === 'all' && (
-        <div className="recipes-toolbar">
-          <div className="search-wrap">
-            <Search size={15} />
-            <input
-              className="search-input"
-              placeholder="Search recipes…"
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
+        <div className="recipes-filters">
+          {/* Search + selects row */}
+          <div className="recipes-toolbar">
+            <div className="search-wrap">
+              <Search size={15} />
+              <input
+                className="search-input"
+                placeholder="Search recipes…"
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
+            <select
+              className="filter-select"
+              value={dietType}
+              onChange={(e) => { setDietType(e.target.value as DietType | ''); setPage(1) }}
+            >
+              {DIET_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <select
+              className="filter-select"
+              value={cuisine}
+              onChange={(e) => { setCuisine(e.target.value); setPage(1) }}
+            >
+              {CUISINE_OPTIONS.map((c) => (
+                <option key={c} value={c}>{c || 'All cuisines'}</option>
+              ))}
+            </select>
           </div>
-          <select
-            className="filter-select"
-            value={dietType}
-            onChange={(e) => { setDietType(e.target.value as DietType | ''); setPage(1) }}
-          >
-            {DIET_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <select
-            className="filter-select"
-            value={cuisine}
-            onChange={(e) => { setCuisine(e.target.value); setPage(1) }}
-          >
-            {CUISINE_OPTIONS.map((c) => (
-              <option key={c} value={c}>{c || 'All cuisines'}</option>
-            ))}
-          </select>
+
+          {/* Meal type chips */}
+          <div className="filter-chips-row">
+            <span className="filter-chips-label">Meal</span>
+            <div className="filter-chips">
+              {MEAL_TYPE_CHIPS.map((chip) => (
+                <button
+                  key={chip.value}
+                  className={`filter-chip ${mealType === chip.value ? 'filter-chip--active' : ''}`}
+                  onClick={() => { setMealType(mealType === chip.value ? '' : chip.value); setPage(1) }}
+                >
+                  <span>{chip.emoji}</span>
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+
+            <span className="filter-chips-label filter-chips-label--gap">Time</span>
+            <div className="filter-chips">
+              {TIME_CHIPS.map((chip) => (
+                <button
+                  key={chip.value}
+                  className={`filter-chip ${maxCookTime === chip.value ? 'filter-chip--active' : ''}`}
+                  onClick={() => { setMaxCookTime(maxCookTime === chip.value ? '' : chip.value); setPage(1) }}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Clear all active filters */}
+            {(mealType || maxCookTime || dietType || cuisine || search) && (
+              <button
+                className="filter-clear-btn"
+                onClick={() => {
+                  setMealType(''); setMaxCookTime(''); setDietType('')
+                  setCuisine(''); setSearch(''); setPage(1)
+                }}
+              >
+                <X size={12} /> Clear
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -431,6 +541,7 @@ export default function RecipesPage() {
               recipe={recipe}
               onClick={() => router.push(`/recipes/${recipe.id}`)}
               onToggleSave={(e) => handleToggleSave(e, recipe)}
+              onAddToPlan={(e) => { e.stopPropagation(); setPlanRecipe({ id: recipe.id, title: recipe.title }) }}
             />
           ))}
         </div>
@@ -482,6 +593,24 @@ export default function RecipesPage() {
           <GenerateModal
             onClose={() => setShowGenerateModal(false)}
             onSuccess={handleGenerateSuccess}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Pantry Suggestions Modal ── */}
+      <AnimatePresence>
+        {showPantryModal && (
+          <PantrySuggestionsModal onClose={() => setShowPantryModal(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* ── Add to Plan Modal ── */}
+      <AnimatePresence>
+        {planRecipe && (
+          <AddToPlanModal
+            recipeId={planRecipe.id}
+            recipeTitle={planRecipe.title}
+            onClose={() => setPlanRecipe(null)}
           />
         )}
       </AnimatePresence>

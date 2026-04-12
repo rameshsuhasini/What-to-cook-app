@@ -6,7 +6,7 @@
 // Keeps the API contract explicit and safe.
 // ─────────────────────────────────────────
 
-import { DietType } from '@prisma/client'
+import { DietType, MealType } from '@prisma/client'
 
 // ── Input DTOs ──────────────────────────
 
@@ -34,6 +34,7 @@ export interface CreateRecipeDTO {
   fat?: number
   cuisine?: string
   dietType?: DietType
+  mealType?: MealType
   ingredients: CreateRecipeIngredientDTO[]
   steps: CreateRecipeStepDTO[]
 }
@@ -51,6 +52,7 @@ export interface UpdateRecipeDTO {
   fat?: number
   cuisine?: string
   dietType?: DietType
+  mealType?: MealType
   ingredients?: CreateRecipeIngredientDTO[]
   steps?: CreateRecipeStepDTO[]
 }
@@ -60,9 +62,11 @@ export interface RecipeQueryDTO {
   limit?: number
   search?: string
   dietType?: DietType
+  mealType?: MealType
   cuisine?: string
   maxCalories?: number
   minProtein?: number
+  maxCookTime?: number
   isAiGenerated?: boolean
 }
 

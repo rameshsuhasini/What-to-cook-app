@@ -110,6 +110,17 @@ export class GroceryRepository {
   }
 
   /**
+   * Get all items for a grocery list
+   * Used by the service for dedup checks before insertion
+   */
+  async findItemsByList(groceryListId: string) {
+    return prisma.groceryItem.findMany({
+      where: { groceryListId },
+      select: groceryItemSelect,
+    })
+  }
+
+  /**
    * Add a single item to an existing grocery list
    */
   async addItem(groceryListId: string, item: CreateGroceryItemDTO) {

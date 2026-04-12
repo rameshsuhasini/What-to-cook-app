@@ -67,8 +67,11 @@ export const groceryApi = {
     return res.data.data.list
   },
 
-  generateFromMealPlan: async (mealPlanId: string): Promise<GroceryListGrouped> => {
-    const res = await api.post('/groceries/generate', { mealPlanId })
+  generateFromMealPlan: async (
+    mealPlanId: string,
+    options?: { dates?: string[]; mode?: 'replace' | 'merge' }
+  ): Promise<GroceryListGrouped> => {
+    const res = await api.post('/groceries/generate', { mealPlanId, ...options })
     return res.data.data.list
   },
 

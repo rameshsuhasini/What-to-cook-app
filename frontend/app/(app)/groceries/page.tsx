@@ -78,11 +78,19 @@ export default function GroceriesPage() {
   })
 
   const generateMutation = useMutation({
-    mutationFn: (mealPlanId: string) => groceryApi.generateFromMealPlan(mealPlanId),
-    onSuccess: () => {
+    mutationFn: ({
+      mealPlanId,
+      dates,
+      mode,
+    }: {
+      mealPlanId: string
+      dates: string[]
+      mode: 'replace' | 'merge'
+    }) => groceryApi.generateFromMealPlan(mealPlanId, { dates, mode }),
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['grocery-list'] })
       setShowGenModal(false)
-      showToast('Grocery list generated!')
+      showToast(vars.mode === 'merge' ? 'Items added to your list!' : 'Grocery list generated!')
     },
     onError: (err: Error) => showToast(err.message || 'Failed to generate list', 'error'),
   })
@@ -137,12 +145,6 @@ export default function GroceriesPage() {
   // Meal plan for generate — use current week's plan
   const weekDays = weekView?.days ?? []
   const mealPlanId = weekView?.mealPlan?.id ?? null
-
-  // Count all filled slots and those with linked recipes
-  const allSlots = weekDays.flatMap(d => [d.breakfast, d.lunch, d.dinner, d.snack].filter(Boolean))
-  const totalMeals = allSlots.length
-  const mealsWithRecipes = allSlots.filter(m => m?.recipeId).length
-
 
   return (
     <div className="gr-root">
@@ -418,12 +420,12 @@ export default function GroceriesPage() {
         {showGenModal && (
           <GenerateModal
             mealPlanId={mealPlanId}
-            totalMeals={totalMeals}
-            mealsWithRecipes={mealsWithRecipes}
-            weekStartDate={weekView?.weekStartDate ?? null}
-            weekEndDate={weekView?.weekEndDate ?? null}
+            weekDays={weekDays}
+            hasExistingList={!!listId}
             isPending={generateMutation.isPending}
-            onConfirm={(id) => generateMutation.mutate(id)}
+            onConfirm={(mealPlanId, dates, mode) =>
+              generateMutation.mutate({ mealPlanId, dates, mode })
+            }
             onClose={() => setShowGenModal(false)}
           />
         )}
@@ -600,51 +602,68 @@ function AddItemModal({
 
 // ── Generate modal ───────────────────────
 
-function formatWeekRange(start: string, end: string): string {
-  const s = new Date(start)
-  const e = new Date(end)
-  const sDay = s.getUTCDate()
-  const eDay = e.getUTCDate()
-  const sMon = s.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' })
-  const eMon = e.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' })
-  const year = e.getUTCFullYear()
-  if (sMon === eMon) return `${sDay}–${eDay} ${sMon} ${year}`
-  return `${sDay} ${sMon} – ${eDay} ${eMon} ${year}`
-}
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function GenerateModal({
   mealPlanId,
-  totalMeals,
-  mealsWithRecipes,
-  weekStartDate,
-  weekEndDate,
+  weekDays,
+  hasExistingList,
   isPending,
   onConfirm,
   onClose,
 }: {
   mealPlanId: string | null
-  totalMeals: number
-  mealsWithRecipes: number
-  weekStartDate: string | null
-  weekEndDate: string | null
+  weekDays: import('@/services/meal-plan.service').WeekDay[]
+  hasExistingList: boolean
   isPending: boolean
-  onConfirm: (id: string) => void
+  onConfirm: (mealPlanId: string, dates: string[], mode: 'replace' | 'merge') => void
   onClose: () => void
 }) {
-  const customMeals = totalMeals - mealsWithRecipes
-  const canGenerate = !!mealPlanId && mealsWithRecipes > 0
+  // All 7 day dates selected by default
+  const allDates = weekDays.map((d) => d.date)
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set(allDates))
+  const [mode, setMode] = useState<'replace' | 'merge'>(hasExistingList ? 'merge' : 'replace')
+
+  const toggleDate = (date: string) => {
+    setSelectedDates((prev) => {
+      const next = new Set(prev)
+      if (next.has(date)) {
+        // Don't allow deselecting the last day
+        if (next.size === 1) return prev
+        next.delete(date)
+      } else {
+        next.add(date)
+      }
+      return next
+    })
+  }
+
+  const selectAll = () => setSelectedDates(new Set(allDates))
+  const selectToday = () => {
+    const today = new Date().toISOString().split('T')[0]
+    const match = allDates.find((d) => d.startsWith(today))
+    if (match) setSelectedDates(new Set([match]))
+  }
+
+  // Stats for selected days
+  const selectedMeals = weekDays
+    .filter((d) => selectedDates.has(d.date))
+    .flatMap((d) => [d.breakfast, d.lunch, d.dinner, d.snack].filter(Boolean))
+  const recipeMeals = selectedMeals.filter((m) => m?.recipeId).length
+
+  const canGenerate = !!mealPlanId && recipeMeals > 0 && !isPending
 
   return (
     <div className="gr-overlay" onClick={onClose}>
       <motion.div
         className="gr-modal gr-gen-modal"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         transition={{ duration: 0.22 }}
       >
-        {/* Header row */}
+        {/* Header */}
         <div className="gr-gen-top">
           <div className="gr-gen-icon-wrap">
             <ShoppingCart size={22} />
@@ -654,73 +673,124 @@ function GenerateModal({
               <Sparkles size={11} /> AI Powered
             </span>
             <h2 className="gr-gen-title">Generate Grocery List</h2>
-            <p className="gr-gen-sub">We'll scan your meal plan and compile everything you need to shop for.</p>
+            <p className="gr-gen-sub">Choose which days to shop for.</p>
           </div>
-          <button onClick={onClose} className="gr-modal-close gr-gen-close"><X size={18} /></button>
+          <button onClick={onClose} className="gr-modal-close gr-gen-close">
+            <X size={18} />
+          </button>
         </div>
 
         <div className="gr-gen-divider" />
 
-        {/* Week row */}
-        {weekStartDate && weekEndDate && (
-          <div className="gr-gen-week-row">
-            <Calendar size={16} className="gr-gen-week-icon" />
-            <span className="gr-gen-week-label">Week of</span>
-            <span className="gr-gen-week-val">{formatWeekRange(weekStartDate, weekEndDate)}</span>
+        {/* Day picker */}
+        <div className="gr-gen-section">
+          <div className="gr-gen-section-hd">
+            <span className="gr-gen-section-label">
+              <Calendar size={13} /> Select days
+            </span>
+            <div className="gr-gen-section-links">
+              <button className="gr-gen-link" onClick={selectToday}>Today</button>
+              <button className="gr-gen-link" onClick={selectAll}>All week</button>
+            </div>
           </div>
-        )}
+          <div className="gr-day-chips">
+            {weekDays.map((day, i) => {
+              const d = new Date(day.date)
+              const dateNum = d.getUTCDate()
+              const dayLabel = DAY_NAMES[i] ?? DAY_NAMES[d.getUTCDay() === 0 ? 6 : d.getUTCDay() - 1]
+              const active = selectedDates.has(day.date)
+              const slots = [day.breakfast, day.lunch, day.dinner, day.snack].filter(Boolean)
+              const hasRecipe = slots.some((s) => s?.recipeId)
+              return (
+                <button
+                  key={day.date}
+                  className={`gr-day-chip ${active ? 'gr-day-chip--active' : ''} ${!hasRecipe ? 'gr-day-chip--dim' : ''}`}
+                  onClick={() => toggleDate(day.date)}
+                >
+                  <span className="gr-day-chip-name">{dayLabel}</span>
+                  <span className="gr-day-chip-num">{dateNum}</span>
+                  {hasRecipe && <span className="gr-day-chip-dot" />}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
-        {/* Stats card */}
-        {totalMeals > 0 ? (
-          <div className="gr-gen-stats-card">
+        {/* Stats */}
+        <div className="gr-gen-stats-card" style={{ margin: '0 1.5rem 0.25rem' }}>
+          {recipeMeals > 0 ? (
             <div className="gr-gen-stats-top">
               <span className="gr-gen-dot" />
               <span className="gr-gen-stats-text">
-                <strong>{mealsWithRecipes}</strong> of {totalMeals} meals have full recipes
+                <strong>{recipeMeals}</strong> meal{recipeMeals !== 1 ? 's' : ''} with recipes in selected days
               </span>
             </div>
-            {customMeals > 0 && (
-              <p className="gr-gen-stats-note">
-                {customMeals} custom meal{customMeals > 1 ? 's' : ''} without recipes won't contribute to your grocery list.
-                Use ✨ AI interpret in the planner to fix this.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="gr-gen-stats-card gr-gen-stats-card--empty">
-            <span className="gr-gen-dot gr-gen-dot--amber" />
-            <span className="gr-gen-stats-text">No meals found in your current week's plan.</span>
+          ) : (
+            <div className="gr-gen-stats-top">
+              <span className="gr-gen-dot gr-gen-dot--amber" />
+              <span className="gr-gen-stats-text">
+                {mealPlanId
+                  ? 'No recipes in the selected days — add recipes to your meal plan first.'
+                  : 'No meal plan found for this week.'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Mode selector — only shown when a list already exists */}
+        {hasExistingList && (
+          <div className="gr-gen-section">
+            <div className="gr-gen-section-hd">
+              <span className="gr-gen-section-label">Existing list</span>
+            </div>
+            <div className="gr-mode-cards">
+              <button
+                className={`gr-mode-card ${mode === 'merge' ? 'gr-mode-card--active' : ''}`}
+                onClick={() => setMode('merge')}
+              >
+                <span className="gr-mode-card-icon">➕</span>
+                <div>
+                  <span className="gr-mode-card-title">Merge</span>
+                  <span className="gr-mode-card-desc">Add new items — keep existing ones</span>
+                </div>
+              </button>
+              <button
+                className={`gr-mode-card ${mode === 'replace' ? 'gr-mode-card--active' : ''}`}
+                onClick={() => setMode('replace')}
+              >
+                <span className="gr-mode-card-icon">🔄</span>
+                <div>
+                  <span className="gr-mode-card-title">Replace</span>
+                  <span className="gr-mode-card-desc">Start fresh, delete current list</span>
+                </div>
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Steps */}
-        <ol className="gr-gen-steps">
-          {[
-            'Scan all recipes in this week\'s meal plan',
-            'Merge duplicate ingredients automatically',
-            'Sort items by grocery category for easy shopping',
-          ].map((step, i) => (
-            <li key={i} className="gr-gen-step">
-              <span className="gr-gen-step-num">{i + 1}</span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
-
-        <div className="gr-gen-divider" />
+        <div className="gr-gen-divider" style={{ marginTop: '1.25rem' }} />
 
         {/* Actions */}
         <div className="gr-modal-actions">
-          <button className="gr-btn gr-btn--ghost" onClick={onClose}>Cancel</button>
+          <button className="gr-btn gr-btn--ghost" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="gr-btn gr-btn--primary"
-            disabled={!canGenerate || isPending}
-            onClick={() => mealPlanId && onConfirm(mealPlanId)}
-          >
-            {isPending
-              ? <><RefreshCw size={14} className="gr-spin" /> Generating…</>
-              : <>Generate List ›</>
+            disabled={!canGenerate}
+            onClick={() =>
+              mealPlanId && onConfirm(mealPlanId, Array.from(selectedDates), mode)
             }
+          >
+            {isPending ? (
+              <>
+                <RefreshCw size={14} className="gr-spin" /> Generating…
+              </>
+            ) : mode === 'merge' ? (
+              <>Add to List ›</>
+            ) : (
+              <>Generate List ›</>
+            )}
           </button>
         </div>
       </motion.div>

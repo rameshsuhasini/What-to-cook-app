@@ -2,54 +2,12 @@
    Progress CSS — What to Cook?
    ───────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-:root {
-  --teal-50:  #e1f5ee;
-  --teal-100: #9fe1cb;
-  --teal-200: #5dcaa5;
-  --teal-400: #1d9e75;
-  --teal-600: #0f6e56;
-
-  --coral-50:  #faece7;
-  --coral-400: #d85a30;
-  --coral-600: #993c1d;
-
-  --amber-50:  #faeeda;
-  --amber-400: #ba7517;
-
-  --blue-50:  #e6f1fb;
-  --blue-400: #378add;
-  --blue-600: #185fa5;
-
-  --green-50:  #e2f5e8;
-  --green-400: #2e9e5b;
-
-  --sand-50:  #faf9f6;
-  --sand-100: #f2f0eb;
-  --sand-200: #e4e0d8;
-
-  --txt:  #1a1a18;
-  --txt2: #5f5e5a;
-  --txt3: #8a8880;
-
-  --card-bg: white;
-  --card-border: rgba(0,0,0,0.07);
-  --card-shadow: 0 2px 16px rgba(0,0,0,0.06);
-
-  --radius-md: 12px;
-  --radius-lg: 16px;
-
-  --fd: 'Playfair Display', Georgia, serif;
-  --fb: 'DM Sans', system-ui, sans-serif;
-}
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 .pg-root {
-  max-width: 960px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: var(--page-padding) var(--page-padding) var(--page-padding-bottom);
   font-family: var(--fb);
 }
 
@@ -93,6 +51,20 @@
   font-size: 2rem;
   font-weight: 600;
   color: var(--txt);
+  position: relative;
+  display: inline-block;
+  padding-bottom: 10px;
+}
+
+.pg-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 72px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--teal-400), transparent);
 }
 .pg-header-actions {
   display: flex;
@@ -153,6 +125,12 @@
   gap: 12px;
   align-items: flex-start;
   box-shadow: var(--card-shadow);
+  transition: transform 200ms var(--ease), box-shadow 200ms var(--ease);
+}
+
+.pg-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
 }
 .pg-stat-icon {
   width: 38px;
@@ -189,6 +167,95 @@
   font-size: 0.74rem;
   color: var(--txt3);
   margin-top: 3px;
+}
+
+/* ── Goal progress card ─────────────────── */
+.pg-goal-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Subtle decorative gradient accent in top-right */
+.pg-goal-card::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(29,158,117,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.pg-goal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+  color: var(--teal-400);
+}
+.pg-goal-header h2 {
+  font-family: var(--fd);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--txt);
+  flex: 1;
+  letter-spacing: -0.01em;
+}
+.pg-goal-pct {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--teal-600);
+  letter-spacing: -0.02em;
+  font-family: var(--fd);
+  line-height: 1;
+}
+
+.pg-goal-track {
+  height: 10px;
+  background: var(--sand-200);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.pg-goal-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--teal-400), var(--teal-600));
+  box-shadow: 0 0 8px rgba(29,158,117,0.35);
+}
+
+.pg-goal-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--txt3);
+  font-weight: 500;
+}
+.pg-goal-labels span:first-child,
+.pg-goal-labels span:last-child {
+  background: var(--sand-100);
+  border: 1px solid var(--sand-200);
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+}
+.pg-goal-remaining {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--teal-600);
+  background: var(--teal-50);
+  border: 1px solid var(--teal-100);
+  padding: 4px 12px;
+  border-radius: 99px;
 }
 
 /* ── Macros section ─────────────────────── */
@@ -283,7 +350,8 @@
 }
 .pg-chart-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
   margin-bottom: 1.5rem;
 }
@@ -296,6 +364,35 @@
 .pg-chart-sub {
   font-size: 0.8rem;
   color: var(--txt3);
+}
+
+/* ── Weight range toggle ────────────────── */
+.pg-range-toggle {
+  display: flex;
+  gap: 3px;
+  background: var(--sand-100);
+  border-radius: 8px;
+  padding: 3px;
+}
+.pg-range-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  font-family: var(--fb);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--txt3);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.pg-range-btn:hover { color: var(--txt); }
+.pg-range-btn--active {
+  background: white;
+  color: var(--teal-600);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 .pg-chart-skeleton {
   height: 260px;
@@ -503,8 +600,19 @@
 }
 
 /* ── Responsive ─────────────────────────── */
+@media (max-width: 900px) {
+  .pg-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 640px) {
   .pg-header { flex-direction: column; align-items: flex-start; }
   .pg-macros-grid { grid-template-columns: 1fr; }
   .pg-tabs { width: 100%; }
+  .pg-chart-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .pg-range-toggle { align-self: flex-start; }
+}
+
+@media (max-width: 480px) {
+  .pg-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .pg-title { font-size: 1.6rem; }
 }

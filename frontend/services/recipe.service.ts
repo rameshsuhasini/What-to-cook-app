@@ -13,6 +13,8 @@ export type DietType =
   | 'HALAL'
   | 'KOSHER'
 
+export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK'
+
 export interface RecipeIngredient {
   id: string
   ingredientName: string
@@ -40,6 +42,7 @@ export interface Recipe {
   fat: number | null
   cuisine: string | null
   dietType: DietType
+  mealType: MealType | null
   isAiGenerated: boolean
   createdByUserId: string | null
   createdAt: string
@@ -68,8 +71,10 @@ export interface RecipeQuery {
   limit?: number
   search?: string
   dietType?: DietType
+  mealType?: MealType
   cuisine?: string
   maxCalories?: number
+  maxCookTime?: number
   isAiGenerated?: boolean
 }
 
@@ -105,8 +110,10 @@ export const recipeApi = {
     if (query.limit)          params.set('limit', String(query.limit))
     if (query.search)         params.set('search', query.search)
     if (query.dietType)       params.set('dietType', query.dietType)
+    if (query.mealType)       params.set('mealType', query.mealType)
     if (query.cuisine)        params.set('cuisine', query.cuisine)
     if (query.maxCalories)    params.set('maxCalories', String(query.maxCalories))
+    if (query.maxCookTime)    params.set('maxCookTime', String(query.maxCookTime))
     if (query.isAiGenerated !== undefined)
       params.set('isAiGenerated', String(query.isAiGenerated))
 

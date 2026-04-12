@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import axios from 'axios'
-import { Eye, EyeOff, ChefHat, ArrowRight, Loader2, Check, X } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight, Loader2, Check, X } from 'lucide-react'
+import Image from 'next/image'
 import { useAuthStore } from '@/store/auth.store'
 
 interface SignupForm {
@@ -80,7 +81,7 @@ export default function SignupPage() {
         <div className="auth-form-container">
           {/* Mobile logo */}
           <div className="auth-mobile-logo">
-            <ChefHat size={28} strokeWidth={1.5} />
+            <Image src="/images/appIcon.png" alt="What to Cook?" width={36} height={36} />
             <span>What to Cook?</span>
           </div>
 
@@ -224,7 +225,7 @@ function BrandPanel() {
   return (
     <div className="brand-inner">
       <div className="brand-logo">
-        <ChefHat size={36} strokeWidth={1.5} />
+        <Image src="/images/appIcon.png" alt="What to Cook?" width={52} height={52} />
         <span>What to Cook?</span>
       </div>
 

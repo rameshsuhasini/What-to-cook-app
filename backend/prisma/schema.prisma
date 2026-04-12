@@ -136,6 +136,7 @@ model Recipe {
   fat             Int?
   cuisine         String?
   dietType        DietType  @default(NONE) @map("diet_type")
+  mealType        MealType? @map("meal_type")
   isAiGenerated   Boolean   @default(false) @map("is_ai_generated")
   createdByUserId String?   @map("created_by_user_id")
   createdAt       DateTime  @default(now()) @map("created_at")

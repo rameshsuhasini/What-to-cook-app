@@ -12,6 +12,24 @@ export interface HealthInsights {
   motivationalMessage: string
 }
 
+export interface PantryRecipeSuggestion {
+  title: string
+  description: string
+  usedIngredients: string[]
+  missingIngredients: string[]
+  estimatedCalories: number
+  prepTimeMinutes: number
+  cookTimeMinutes: number
+  difficulty: 'Easy' | 'Medium' | 'Hard'
+  steps: string[]
+}
+
+export interface AIPantrySuggestions {
+  suggestions: PantryRecipeSuggestion[]
+  pantryHealthScore: number
+  missingEssentials: string[]
+}
+
 export interface GeneratedRecipe {
   title: string
   description: string
@@ -50,8 +68,8 @@ export const aiApi = {
     return res.data.data
   },
 
-  getPantrySuggestions: async (): Promise<{ suggestions: string[] }> => {
+  getPantrySuggestions: async (): Promise<AIPantrySuggestions> => {
     const res = await api.post('/api/ai/pantry-suggestions')
-    return res.data.data
+    return res.data.data.suggestions
   },
 }

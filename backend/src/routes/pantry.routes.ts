@@ -36,7 +36,7 @@ router.get(
   [
     query('search').optional().trim().isLength({ max: 200 }),
     query('page').optional().isInt({ min: 1 }).withMessage('Page must be positive'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be 1–100'),
+    query('limit').optional().isInt({ min: 1, max: 500 }).withMessage('Limit must be 1–500'),
   ],
   validate,
   pantryController.getPantryItems.bind(pantryController)

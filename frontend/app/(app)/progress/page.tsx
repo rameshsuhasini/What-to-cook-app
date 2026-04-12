@@ -9,8 +9,8 @@ import {
   Target, ArrowUp, ArrowDown, Plus, Activity,
 } from 'lucide-react'
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
-  Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine
+  AreaChart, Area, ComposedChart, Bar, Line, Legend,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine
 } from 'recharts'
 import { healthApi, WeightLog, NutritionLog } from '@/services/health.service'
 import { profileApi } from '@/services/profile.service'
@@ -74,6 +74,7 @@ export default function ProgressPage() {
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [showNutritionModal, setShowNutritionModal] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  const [weightRange, setWeightRange] = useState<7 | 30 | 90>(30)
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -150,9 +151,13 @@ export default function ProgressPage() {
     : null
   const bmiInfo = bmi ? bmiCategory(bmi) : null
 
+  // Sort logs ascending (oldest first) — API may return newest-first
+  const sortedWeightLogs = [...weightLogs]
+    .sort((a, b) => new Date(a.logDate).getTime() - new Date(b.logDate).getTime())
+
   // Goal progress
-  const startWeight = weightLogs.length > 0
-    ? weightLogs[weightLogs.length - 1].weightKg   // oldest log
+  const startWeight = sortedWeightLogs.length > 0
+    ? sortedWeightLogs[0].weightKg   // oldest log is first after sort
     : profileWeight
   const goalProgress = (() => {
     if (startWeight == null || currentWeight == null || targetWeight == null) return null
@@ -166,17 +171,17 @@ export default function ProgressPage() {
     ? parseFloat(Math.abs(currentWeight - targetWeight).toFixed(1))
     : null
 
-  // Chart data
-  const weightChartData = [...weightLogs]
-    .reverse()
-    .slice(-30)
+  // Chart data — ascending, filtered to the selected day range
+  const cutoffMs = Date.now() - weightRange * 24 * 60 * 60 * 1000
+  const weightChartData = sortedWeightLogs
+    .filter(l => new Date(l.logDate).getTime() >= cutoffMs)
     .map(l => ({
       date: new Date(l.logDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
       weight: l.weightKg,
     }))
 
   const nutritionChartData = [...nutritionLogs]
-    .reverse()
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(-14)
     .map(l => ({
       date: new Date(l.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
@@ -356,8 +361,21 @@ export default function ProgressPage() {
             transition={{ duration: 0.3 }}
           >
             <div className="pg-chart-header">
-              <h2>Weight over time</h2>
-              <span className="pg-chart-sub">{weightLogs.length} entries</span>
+              <div>
+                <h2>Weight over time</h2>
+                <span className="pg-chart-sub">{weightChartData.length} entries</span>
+              </div>
+              <div className="pg-range-toggle">
+                {([7, 30, 90] as const).map(r => (
+                  <button
+                    key={r}
+                    className={`pg-range-btn${weightRange === r ? ' pg-range-btn--active' : ''}`}
+                    onClick={() => setWeightRange(r)}
+                  >
+                    {r}d
+                  </button>
+                ))}
+              </div>
             </div>
 
             {weightLoading ? (
@@ -401,9 +419,9 @@ export default function ProgressPage() {
                   {targetWeight && (
                     <ReferenceLine
                       y={targetWeight}
-                      stroke="#378add"
+                      stroke="#d85a30"
                       strokeDasharray="4 4"
-                      label={{ value: `Goal ${targetWeight} kg`, position: 'insideRight', fontSize: 11, fill: '#378add', dx: 4 }}
+                      label={{ value: 'Your goal', position: 'insideRight', fontSize: 11, fill: '#d85a30', dx: 4 }}
                     />
                   )}
                   <Area
@@ -412,20 +430,23 @@ export default function ProgressPage() {
                     stroke="#1d9e75"
                     strokeWidth={2.5}
                     fill="url(#weightGrad)"
-                    dot={{ r: 3, fill: '#1d9e75', strokeWidth: 0 }}
-                    activeDot={{ r: 5 }}
+                    // single-point: render a visible scatter dot; line needs 2+ points
+                    dot={{ r: weightChartData.length === 1 ? 6 : 3, fill: '#1d9e75', strokeWidth: 2, stroke: 'white' }}
+                    activeDot={{ r: 6 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             )}
 
-            {/* Recent log entries */}
+            {/* Recent log entries — newest first */}
             {weightLogs.length > 0 && (
               <div className="pg-log-list">
                 <h3 className="pg-log-title">Recent entries</h3>
-                {weightLogs.slice(0, 8).map((log, i) => {
-                  const prev = weightLogs[i + 1]
-                  const diff = prev ? log.weightKg - prev.weightKg : null
+                {/* Take latest 8 from ascending-sorted logs, then reverse for newest-at-top display */}
+                {[...sortedWeightLogs].slice(-8).reverse().map((log, i, arr) => {
+                  // arr[i+1] is the entry from the day BEFORE this one (older)
+                  const olderEntry = arr[i + 1]
+                  const diff = olderEntry ? log.weightKg - olderEntry.weightKg : null
                   return (
                     <div key={log.id} className="pg-log-row">
                       <div className="pg-log-date">
@@ -458,7 +479,7 @@ export default function ProgressPage() {
             transition={{ duration: 0.3 }}
           >
             <div className="pg-chart-header">
-              <h2>Calorie history</h2>
+              <h2>Nutrition history</h2>
               <span className="pg-chart-sub">Last 14 days</span>
             </div>
 
@@ -470,20 +491,42 @@ export default function ProgressPage() {
                 <p>No nutrition entries yet. Start tracking your meals!</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={nutritionChartData} margin={{ top: 8, right: 40, bottom: 0, left: -10 }}>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={nutritionChartData} margin={{ top: 8, right: 56, bottom: 0, left: -10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e4e0d8" vertical={false} />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8a8880' }} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#8a8880' }} tickLine={false} axisLine={false} />
+                  {/* Left Y axis — grams for macros */}
+                  <YAxis yAxisId="macros" tick={{ fontSize: 11, fill: '#8a8880' }} tickLine={false} axisLine={false} />
+                  {/* Right Y axis — kcal for calories */}
+                  <YAxis yAxisId="cal" orientation="right" tick={{ fontSize: 11, fill: '#8a8880' }} tickLine={false} axisLine={false} />
                   <Tooltip content={<NutritionTooltip />} />
+                  <Legend
+                    iconSize={10}
+                    iconType="circle"
+                    wrapperStyle={{ fontSize: 11, paddingTop: 12 }}
+                  />
                   <ReferenceLine
+                    yAxisId="cal"
                     y={calorieGoal}
                     stroke="#d85a30"
                     strokeDasharray="4 4"
-                    label={{ value: 'Goal', position: 'insideRight', fontSize: 11, fill: '#d85a30', dx: 4 }}
+                    label={{ value: 'Cal goal', position: 'insideRight', fontSize: 10, fill: '#d85a30', dx: 4 }}
                   />
-                  <Bar dataKey="calories" name="Calories" fill="#1d9e75" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                </BarChart>
+                  {/* Calories as subtle background bars */}
+                  <Bar
+                    yAxisId="cal"
+                    dataKey="calories"
+                    name="Calories (kcal)"
+                    fill="#1d9e75"
+                    fillOpacity={0.18}
+                    radius={[3, 3, 0, 0]}
+                    maxBarSize={38}
+                  />
+                  {/* Macro lines */}
+                  <Line yAxisId="macros" type="monotone" dataKey="protein" name="Protein (g)"  stroke="#1d9e75" strokeWidth={2} dot={{ r: 3, fill: '#1d9e75' }} activeDot={{ r: 5 }} />
+                  <Line yAxisId="macros" type="monotone" dataKey="carbs"   name="Carbs (g)"    stroke="#ba7517" strokeWidth={2} dot={{ r: 3, fill: '#ba7517' }} activeDot={{ r: 5 }} />
+                  <Line yAxisId="macros" type="monotone" dataKey="fat"     name="Fat (g)"      stroke="#378add" strokeWidth={2} dot={{ r: 3, fill: '#378add' }} activeDot={{ r: 5 }} />
+                </ComposedChart>
               </ResponsiveContainer>
             )}
 

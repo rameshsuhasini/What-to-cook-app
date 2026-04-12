@@ -2,53 +2,12 @@
    Groceries CSS — What to Cook?
    ───────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-:root {
-  --teal-50:  #e1f5ee;
-  --teal-100: #9fe1cb;
-  --teal-200: #5dcaa5;
-  --teal-400: #1d9e75;
-  --teal-600: #0f6e56;
-  --teal-800: #085041;
-
-  --coral-50:  #faece7;
-  --coral-400: #d85a30;
-
-  --amber-50:  #faeeda;
-  --amber-400: #ba7517;
-
-  --blue-50:  #e6f1fb;
-  --blue-400: #378add;
-
-  --purple-50: #f0ebfa;
-  --purple-400: #8b5cf6;
-
-  --sand-50:  #faf9f6;
-  --sand-100: #f2f0eb;
-  --sand-200: #e4e0d8;
-
-  --txt:  #1a1a18;
-  --txt2: #5f5e5a;
-  --txt3: #8a8880;
-
-  --card-bg: white;
-  --card-border: rgba(0,0,0,0.07);
-  --card-shadow: 0 2px 16px rgba(0,0,0,0.06);
-
-  --radius-md: 12px;
-  --radius-lg: 16px;
-
-  --fd: 'Playfair Display', Georgia, serif;
-  --fb: 'DM Sans', system-ui, sans-serif;
-}
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 .gr-root {
-  max-width: 860px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: var(--page-padding) var(--page-padding) var(--page-padding-bottom);
   font-family: var(--fb);
 }
 
@@ -92,6 +51,20 @@
   font-size: 2rem;
   font-weight: 600;
   color: var(--txt);
+  position: relative;
+  display: inline-block;
+  padding-bottom: 10px;
+}
+
+.gr-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 72px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--teal-400), transparent);
 }
 .gr-header-actions {
   display: flex;
@@ -337,9 +310,9 @@
   gap: 10px;
   padding: 10px 8px;
   border-radius: 8px;
-  transition: background 0.15s;
+  transition: background 0.15s, transform 180ms var(--ease);
 }
-.gr-item:hover { background: var(--sand-50); }
+.gr-item:hover { background: var(--sand-50); transform: translateX(3px); }
 .gr-item + .gr-item { border-top: 1px solid var(--sand-100); }
 
 .gr-item-check {
@@ -645,6 +618,167 @@
   padding: 1rem 1.5rem 1.5rem;
 }
 
+/* ── Generate modal — sections ──────────── */
+.gr-gen-section {
+  padding: 1rem 1.5rem 0;
+}
+
+.gr-gen-section-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.gr-gen-section-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--txt3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.gr-gen-section-links {
+  display: flex;
+  gap: 10px;
+}
+
+.gr-gen-link {
+  background: none;
+  border: none;
+  font-family: var(--fb);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--teal-600);
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 150ms;
+}
+.gr-gen-link:hover { opacity: 0.7; }
+
+/* ── Day chips ──────────────────────────── */
+.gr-day-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.gr-day-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1.5px solid var(--sand-200);
+  background: white;
+  cursor: pointer;
+  transition: all 150ms;
+  min-width: 44px;
+  font-family: var(--fb);
+  position: relative;
+}
+
+.gr-day-chip:hover {
+  border-color: var(--teal-400);
+  background: var(--teal-50);
+}
+
+.gr-day-chip--active {
+  border-color: var(--teal-400);
+  background: var(--teal-400);
+  color: white;
+}
+
+.gr-day-chip--dim {
+  opacity: 0.55;
+}
+
+.gr-day-chip--active.gr-day-chip--dim {
+  opacity: 0.75;
+}
+
+.gr-day-chip-name {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gr-day-chip-num {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.gr-day-chip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--teal-200);
+  margin-top: 1px;
+}
+
+.gr-day-chip--active .gr-day-chip-dot {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+/* ── Mode cards (Replace / Merge) ───────── */
+.gr-mode-cards {
+  display: flex;
+  gap: 8px;
+}
+
+.gr-mode-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--sand-200);
+  background: white;
+  cursor: pointer;
+  transition: all 150ms;
+  font-family: var(--fb);
+  text-align: left;
+}
+
+.gr-mode-card:hover {
+  border-color: var(--teal-400);
+  background: var(--teal-50);
+}
+
+.gr-mode-card--active {
+  border-color: var(--teal-400);
+  background: var(--teal-50);
+  box-shadow: 0 0 0 2px rgba(29, 158, 117, 0.12);
+}
+
+.gr-mode-card-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.gr-mode-card-title {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--txt);
+}
+
+.gr-mode-card-desc {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--txt3);
+  line-height: 1.35;
+  margin-top: 1px;
+}
+
 /* ── Header delete button ───────────────── */
 .gr-btn-delete-list {
   display: inline-flex;
@@ -724,8 +858,19 @@
 }
 
 /* ── Responsive ─────────────────────────── */
+@media (max-width: 760px) {
+  .gr-summary { flex-wrap: wrap; gap: 0.75rem; }
+  .gr-summary-stat { flex: 1; min-width: 120px; }
+}
+
 @media (max-width: 640px) {
-  .gr-header { flex-direction: column; align-items: flex-start; }
-  .gr-header-actions { width: 100%; }
-  .gr-summary { gap: 1rem; }
+  .gr-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .gr-header-actions { width: 100%; flex-wrap: wrap; }
+  .gr-summary { gap: 0.75rem; }
+  .gr-title { font-size: 1.7rem; }
+}
+
+@media (max-width: 480px) {
+  .gr-summary { flex-direction: column; }
+  .gr-summary-stat { width: 100%; }
 }

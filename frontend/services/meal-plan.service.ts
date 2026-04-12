@@ -11,6 +11,9 @@ export interface MealRecipeSnippet {
   prepTimeMinutes: number | null
   cookTimeMinutes: number | null
   calories: number | null
+  protein: number | null
+  carbs: number | null
+  fat: number | null
   servings: number | null
 }
 

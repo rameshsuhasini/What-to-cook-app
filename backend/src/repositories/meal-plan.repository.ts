@@ -15,6 +15,9 @@ const recipeMinimal = {
   prepTimeMinutes: true,
   cookTimeMinutes: true,
   calories: true,
+  protein: true,
+  carbs: true,
+  fat: true,
   servings: true,
 }
 

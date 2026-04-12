@@ -180,6 +180,27 @@
   color: white;
 }
 
+.action-plan-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--teal-400);
+  background: var(--teal-50);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--teal-600);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.action-plan-btn:hover {
+  background: var(--teal-400);
+  color: white;
+}
+
 /* ── Macro strip ─────────────────────── */
 .macro-strip {
   display: grid;

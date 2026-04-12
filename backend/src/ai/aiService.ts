@@ -44,6 +44,7 @@ export const TOKEN_LIMITS = {
   mealPlanGenerator: 8000,
   healthInsights: 1500,
   pantrySuggestions: 3000,
+  groceryAggregator: 8000,  // full week output: ~50-80 unique items
 } as const
 
 // ── Base message sender ──────────────────

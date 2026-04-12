@@ -66,7 +66,11 @@ body {
 /* ── Brand panel (left) ─────────────────── */
 .auth-brand {
   position: relative;
-  background: linear-gradient(145deg, var(--teal-800) 0%, var(--teal-600) 55%, var(--teal-400) 100%);
+  background-image: url("../public/images/what-to-cook.png");
+  background-size: cover;        /* makes it cover full screen */
+  background-position: center;   /* keeps image centered */
+  background-repeat: no-repeat;  /* prevents tiling */
+  height: 100vh;   
   overflow: hidden;
   padding: 3rem;
   display: flex;
@@ -78,7 +82,7 @@ body {
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 2.25rem;
   width: 100%;
   justify-content: center;
 }
@@ -86,61 +90,82 @@ body {
 .brand-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: white;
+  gap: 12px;
+  color: rgba(255,255,255,0.95);
   font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-.brand-hero h2 {
+/* ── Headline ───────────────────────────── */
+.brand-headline h2 {
   font-family: var(--font-display);
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-size: clamp(1.9rem, 2.8vw, 2.5rem);
   font-weight: 600;
   color: white;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
   margin-bottom: 0.75rem;
 }
 
-.brand-hero p {
-  color: var(--teal-100);
+.brand-headline h2 em {
+  font-style: italic;
+  color: #a8f0d8;
+}
+
+.brand-headline p {
+  color: rgba(255,255,255,0.65);
   font-size: 1rem;
   line-height: 1.6;
   font-weight: 300;
-  max-width: 340px;
+  max-width: 320px;
 }
 
-/* Feature list (login) */
-.brand-features {
-  list-style: none;
+/* ── Dish mosaic ────────────────────────── */
+.dish-mosaic {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.dish-card {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.13);
+  backdrop-filter: blur(12px);
+  border-radius: 14px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+  transition: background 200ms;
 }
 
-.brand-features li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--teal-50);
-  font-size: 0.95rem;
+.dish-card:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+.dish-emoji {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.dish-name {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: white;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.dish-tag {
+  font-size: 0.62rem;
   font-weight: 400;
-}
-
-.feature-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  flex-shrink: 0;
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(168, 240, 216, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Steps (signup) */
@@ -201,9 +226,17 @@ body {
 .blob-2 {
   width: 240px;
   height: 240px;
-  background: radial-gradient(circle, rgba(216, 90, 48, 0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(216, 90, 48, 0.15) 0%, transparent 70%);
   bottom: 40px;
   left: -60px;
+}
+
+.blob-3 {
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(168, 240, 216, 0.12) 0%, transparent 70%);
+  bottom: 160px;
+  right: 20px;
 }
 
 /* ── Form panel (right) ─────────────────── */
@@ -225,11 +258,12 @@ body {
 .auth-mobile-logo {
   display: none;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   color: var(--teal-600);
   font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 500;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin-bottom: 2rem;
 }
 
@@ -278,17 +312,6 @@ body {
   margin-bottom: 0;
 }
 
-.forgot-link {
-  font-size: 0.8rem;
-  color: var(--teal-400);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color var(--transition);
-}
-
-.forgot-link:hover {
-  color: var(--teal-600);
-}
 
 .field-group input {
   width: 100%;

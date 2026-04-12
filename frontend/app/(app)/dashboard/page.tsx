@@ -17,6 +17,8 @@ import { useAuthStore } from '@/store/auth.store'
 import { healthApi } from '@/services/health.service'
 import { mealPlanApi } from '@/services/meal-plan.service'
 import { aiApi } from '@/services/ai.service'
+import { profileApi } from '@/services/profile.service'
+import Link from 'next/link'
 import './dashboard.css'
 
 // ── Animation variants ───────────────────
@@ -48,6 +50,11 @@ export default function DashboardPage() {
     queryFn: () => mealPlanApi.getWeekView(),
   })
 
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: profileApi.getProfile,
+  })
+
   const {
     data: insights,
     mutate: fetchInsights,
@@ -56,11 +63,15 @@ export default function DashboardPage() {
     mutationFn: () => aiApi.generateHealthInsights(),
   })
 
-  const todayNutrition = nutritionData?.today
-  const calorieGoal = user?.profile?.calorieGoal ?? 2000
-  const proteinGoal = user?.profile?.proteinGoal ?? 150
-  const carbGoal = user?.profile?.carbGoal ?? 200
-  const fatGoal = user?.profile?.fatGoal ?? 65
+  // Use today's logged nutrition only — never yesterday's data
+  const todayNutrition = nutritionData?.today ?? null
+
+  // Goals from profile; fall back to sensible defaults if not set
+  const calorieGoal = profile?.calorieGoal ?? 2000
+  const proteinGoal = profile?.proteinGoal ?? 150
+  const carbGoal    = profile?.carbGoal    ?? 200
+  const fatGoal     = profile?.fatGoal     ?? 65
+  const hasCustomGoals = !!(profile?.calorieGoal || profile?.proteinGoal || profile?.carbGoal || profile?.fatGoal)
 
   const todayMeals = weekView?.days?.find(
     (d) => d.date === today.toISOString().split('T')[0]
@@ -94,7 +105,14 @@ export default function DashboardPage() {
           custom={0} variants={fadeUp}
           initial="hidden" animate="visible"
         >
-          <SectionLabel icon={<Flame size={14} />} label="Today's nutrition" />
+          <div className="section-label-row">
+            <SectionLabel icon={<Flame size={14} />} label="Today's nutrition" />
+            {!hasCustomGoals && (
+              <Link href="/profile" className="set-goals-link">
+                Set your goals →
+              </Link>
+            )}
+          </div>
           <div className="nutrition-cards">
             <NutritionRing
               label="Calories"

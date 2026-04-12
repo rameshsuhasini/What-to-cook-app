@@ -1,22 +1,15 @@
 import { Router } from 'express'
 import { body } from 'express-validator'
 import multer from 'multer'
-import path from 'path'
 import profileController from '../controllers/profile.controller'
 import { authenticate } from '../middleware/auth.middleware'
 import { validate } from '../middleware/validate.middleware'
 
-const storage = multer.diskStorage({
-  destination: path.join(process.cwd(), 'uploads', 'avatars'),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname)
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`)
-  },
-})
-
+// Use memory storage — file is passed as a Buffer directly to Vercel Blob.
+// No disk writes, no ephemeral-filesystem dependency.
 const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true)
     else cb(new Error('Only image files are allowed'))

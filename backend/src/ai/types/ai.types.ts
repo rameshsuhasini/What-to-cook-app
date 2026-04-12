@@ -2,7 +2,7 @@
 // AI Types & DTOs
 // ─────────────────────────────────────────
 
-import { DietType } from '@prisma/client'
+import { DietType, MealType } from '@prisma/client'
 
 // ── Shared user context ──────────────────
 // Injected into every AI prompt to
@@ -44,6 +44,7 @@ export interface AIGeneratedRecipe {
   fat: number
   cuisine: string
   dietType: DietType
+  mealType: MealType
   ingredients: {
     ingredientName: string
     quantity: number
@@ -103,6 +104,29 @@ export interface AIHealthInsights {
   recommendations: string[]
   weeklyGoals: string[]
   motivationalMessage: string
+}
+
+// ── Grocery Aggregator ───────────────────
+
+export interface RawRecipeIngredient {
+  name: string
+  quantity: number | null
+  unit: string | null
+  recipe: string  // source recipe title, used for context only
+}
+
+export interface RawPantryItem {
+  name: string
+  quantity: number | null
+  unit: string | null
+}
+
+export interface AIAggregatedGroceryItem {
+  ingredientName: string
+  quantity: number | null
+  unit: string | null
+  category: string
+  note: string | null
 }
 
 // ── Pantry Suggestions ───────────────────

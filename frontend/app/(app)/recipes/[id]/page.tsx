@@ -1,14 +1,16 @@
 'use client'
 
 import './recipe-detail.css'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Clock, Users, Flame, Sparkles, Heart,
-  ShoppingBasket, BookOpen, Loader2, AlertCircle,
+  ShoppingBasket, BookOpen, Loader2, AlertCircle, CalendarPlus,
 } from 'lucide-react'
 import { useRouter, useParams } from 'next/navigation'
 import { recipeApi, DietType } from '@/services/recipe.service'
+import AddToPlanModal from '@/components/AddToPlanModal'
 
 const DIET_LABELS: Record<DietType, string> = {
   NONE:       '',
@@ -39,6 +41,8 @@ export default function RecipeDetailPage() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
+
+  const [showPlanModal, setShowPlanModal] = useState(false)
 
   const { data: recipe, isLoading, isError } = useQuery({
     queryKey: ['recipe', id],
@@ -157,6 +161,13 @@ export default function RecipeDetailPage() {
               <Heart size={15} fill={recipe.isSaved ? 'white' : 'none'} />
               {recipe.isSaved ? 'Saved' : 'Save Recipe'}
             </button>
+            <button
+              className="action-plan-btn"
+              onClick={() => setShowPlanModal(true)}
+            >
+              <CalendarPlus size={15} />
+              Add to Meal Plan
+            </button>
           </div>
         </div>
       </motion.div>
@@ -251,6 +262,16 @@ export default function RecipeDetailPage() {
           </div>
         )}
       </motion.div>
+      {/* ── Add to Plan Modal ── */}
+      <AnimatePresence>
+        {showPlanModal && (
+          <AddToPlanModal
+            recipeId={recipe.id}
+            recipeTitle={recipe.title}
+            onClose={() => setShowPlanModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

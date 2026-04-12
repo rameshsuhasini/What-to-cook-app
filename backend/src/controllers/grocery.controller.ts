@@ -55,6 +55,11 @@ export class GroceryController {
   /**
    * POST /api/groceries/generate
    * Protected — generates a grocery list from a meal plan
+   *
+   * Body:
+   *   mealPlanId: string   — required
+   *   dates?: string[]     — ISO date strings to include; omit for full week
+   *   mode?: 'replace' | 'merge'  — default 'replace'
    */
   async generateGroceryList(
     req: Request,
@@ -63,8 +68,12 @@ export class GroceryController {
   ): Promise<void> {
     try {
       const userId = req.user!.userId
-      const { mealPlanId } = req.body as { mealPlanId: string }
-      const list = await groceryService.generateFromMealPlan(userId, mealPlanId)
+      const { mealPlanId, dates, mode } = req.body as {
+        mealPlanId: string
+        dates?: string[]
+        mode?: 'replace' | 'merge'
+      }
+      const list = await groceryService.generateFromMealPlan(userId, mealPlanId, { dates, mode })
 
       res.status(201).json({ success: true, data: { list } })
     } catch (error) {

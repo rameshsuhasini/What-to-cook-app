@@ -12,6 +12,8 @@ import {
 import { mealPlanApi, MealPlanItem, MealType, WeekView } from '@/services/meal-plan.service'
 import { recipeApi, Recipe } from '@/services/recipe.service'
 import { useRouter } from 'next/navigation'
+import { NutritionProgressRings } from './NutritionProgressRings'
+import { TodaysKitchen } from './TodaysKitchen'
 
 // ── Helpers ───────────────────────────────────────────────
 
@@ -644,6 +646,12 @@ export default function WeeklyPlannerPage() {
           </div>
         </motion.div>
       )}
+
+      {/* ── Bottom grid: Nutrition rings + Today's Kitchen ── */}
+      <div className="planner-bottom-grid">
+        <NutritionProgressRings weekView={weekView} />
+        <TodaysKitchen weekView={weekView} />
+      </div>
 
       {/* ── Add meal modal ── */}
       <AnimatePresence>
