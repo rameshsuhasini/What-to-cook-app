@@ -2,12 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ShoppingCart, CheckSquare, Square, Trash2, Plus,
   RefreshCw, ChevronDown, ChevronUp, Sparkles,
-  Check, X, ShoppingBag, Calendar, Package
+  Check, X, ShoppingBag, Calendar, Package,
+  Share2, Download, Copy, MessageCircle,
 } from 'lucide-react'
 import {
   groceryApi,
@@ -39,7 +40,10 @@ export default function GroceriesPage() {
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
   const [showAddModal, setShowAddModal] = useState(false)
   const [showGenModal, setShowGenModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showSharePopover, setShowSharePopover] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  const shareRef = useRef<HTMLDivElement>(null)
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -127,6 +131,94 @@ export default function GroceriesPage() {
     onError: () => showToast('Failed to move items to pantry', 'error'),
   })
 
+  // ── Close share popover on outside click ─
+  useEffect(() => {
+    if (!showSharePopover) return
+    const handler = (e: MouseEvent) => {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) {
+        setShowSharePopover(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showSharePopover])
+
+  // ── Share helpers ─────────────────────────
+
+  const formatListAsText = (): string => {
+    if (!list) return ''
+    const lines: string[] = []
+    const hr = '─'.repeat(38)
+
+    lines.push('🛒  GROCERY LIST')
+    lines.push(hr)
+
+    for (const cat of list.categories) {
+      lines.push('')
+      lines.push(`  ${cat.name.toUpperCase()}`)
+
+      // Find longest name in this category for column alignment
+      const maxLen = cat.items.reduce((m, i) => Math.max(m, i.ingredientName.length), 0)
+
+      for (const item of cat.items) {
+        const qty = item.quantity
+          ? `${item.quantity}${item.unit ? ' ' + item.unit : ''}`
+          : ''
+        const pad = ' '.repeat(Math.max(2, maxLen - item.ingredientName.length + 4))
+        lines.push(`    ${item.ingredientName}${qty ? pad + qty : ''}`)
+      }
+    }
+
+    lines.push('')
+    lines.push(hr)
+    if (summary) {
+      lines.push(`  ${summary.totalItems} item${summary.totalItems !== 1 ? 's' : ''} total`)
+    }
+
+    return lines.join('\n')
+  }
+
+  const handleDownload = () => {
+    const text = formatListAsText()
+    const blob = new Blob([text], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'grocery-list.txt'
+    a.click()
+    URL.revokeObjectURL(url)
+    setShowSharePopover(false)
+    showToast('List downloaded!')
+  }
+
+  const handleWhatsApp = () => {
+    const text = formatListAsText()
+    const encoded = encodeURIComponent(text)
+    window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer')
+    setShowSharePopover(false)
+  }
+
+  const handleCopy = async () => {
+    const text = formatListAsText()
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast('Copied to clipboard!')
+    } catch {
+      showToast('Failed to copy', 'error')
+    }
+    setShowSharePopover(false)
+  }
+
+  const handleNativeShare = async () => {
+    const text = formatListAsText()
+    try {
+      await navigator.share({ title: 'Grocery List', text })
+    } catch {
+      // User cancelled or API unavailable — silently ignore
+    }
+    setShowSharePopover(false)
+  }
+
   // ── Helpers ──────────────────────────────
 
   const toggleCategory = (name: string) => {
@@ -202,9 +294,51 @@ export default function GroceriesPage() {
             </button>
           )}
           {listId && (
+            <div className="gr-share-wrap" ref={shareRef}>
+              <button
+                className="gr-btn gr-btn--ghost"
+                onClick={() => setShowSharePopover(v => !v)}
+                title="Share grocery list"
+              >
+                <Share2 size={15} />
+                Share
+              </button>
+              <AnimatePresence>
+                {showSharePopover && (
+                  <motion.div
+                    className="gr-share-popover"
+                    initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <button className="gr-share-option" onClick={handleCopy}>
+                      <Copy size={15} />
+                      Copy to clipboard
+                    </button>
+                    <button className="gr-share-option" onClick={handleWhatsApp}>
+                      <MessageCircle size={15} />
+                      Send via WhatsApp
+                    </button>
+                    <button className="gr-share-option" onClick={handleDownload}>
+                      <Download size={15} />
+                      Download .txt
+                    </button>
+                    {typeof navigator !== 'undefined' && 'share' in navigator && (
+                      <button className="gr-share-option" onClick={handleNativeShare}>
+                        <Share2 size={15} />
+                        More options…
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+          {listId && (
             <button
               className="gr-btn-delete-list"
-              onClick={() => deleteListMutation.mutate(listId)}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={deleteListMutation.isPending}
               title="Delete grocery list"
             >
@@ -291,7 +425,7 @@ export default function GroceriesPage() {
               </button>
               <button
                 className="gr-btn gr-btn--danger"
-                onClick={() => deleteListMutation.mutate(listId)}
+                onClick={() => setShowDeleteConfirm(true)}
                 disabled={deleteListMutation.isPending || moveToPantryMutation.isPending}
               >
                 {deleteListMutation.isPending
@@ -412,6 +546,35 @@ export default function GroceriesPage() {
             }}
             onError={(msg) => showToast(msg, 'error')}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete list confirm ── */}
+      <AnimatePresence>
+        {showDeleteConfirm && listId && (
+          <div className="gr-overlay" onClick={() => setShowDeleteConfirm(false)}>
+            <motion.div
+              className="gr-confirm-modal"
+              onClick={e => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.18 }}
+            >
+              <p className="gr-confirm-title">Delete grocery list?</p>
+              <p className="gr-confirm-body">All items will be permanently removed. This cannot be undone.</p>
+              <div className="gr-confirm-actions">
+                <button className="gr-confirm-cancel" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
+                <button
+                  className="gr-confirm-delete"
+                  disabled={deleteListMutation.isPending}
+                  onClick={() => { deleteListMutation.mutate(listId); setShowDeleteConfirm(false) }}
+                >
+                  {deleteListMutation.isPending ? 'Deleting…' : 'Yes, delete'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

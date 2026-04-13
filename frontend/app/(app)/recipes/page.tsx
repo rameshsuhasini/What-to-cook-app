@@ -318,7 +318,7 @@ export default function RecipesPage() {
   const [planRecipe, setPlanRecipe] = useState<{ id: string; title: string } | null>(null)
 
   // All recipes query
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['recipes', { page, search, dietType, mealType, maxCookTime, cuisine }],
     queryFn: () =>
       recipeApi.getRecipes({
@@ -334,7 +334,7 @@ export default function RecipesPage() {
   })
 
   // Saved recipes query
-  const { data: savedData, isLoading: savedLoading } = useQuery({
+  const { data: savedData, isLoading: savedLoading, isError: savedError } = useQuery({
     queryKey: ['recipes-saved'],
     queryFn: recipeApi.getSavedRecipes,
     enabled: tab === 'saved',
@@ -393,6 +393,7 @@ export default function RecipesPage() {
   const recipes = tab === 'all' ? data?.recipes ?? [] : savedData ?? []
   const pagination = tab === 'all' ? data?.pagination : null
   const loading = tab === 'all' ? isLoading : savedLoading
+  const hasError = tab === 'all' ? isError : savedError
 
   return (
     <div className="recipes-root">
@@ -518,6 +519,11 @@ export default function RecipesPage() {
       {loading ? (
         <div className="recipes-loading">
           <Loader2 size={28} className="spin-icon" />
+        </div>
+      ) : hasError ? (
+        <div className="recipes-empty">
+          <ChefHat size={40} strokeWidth={1.2} />
+          <p>Couldn't load recipes. Check your connection and try again.</p>
         </div>
       ) : recipes.length === 0 ? (
         <div className="recipes-empty">

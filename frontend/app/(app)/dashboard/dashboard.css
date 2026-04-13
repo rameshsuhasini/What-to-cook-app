@@ -550,12 +550,57 @@ body {
 
 .empty-cta:hover { text-decoration: underline; }
 
+/* ── Loading skeleton ───────────────────── */
+@keyframes shimmer { to { background-position: -200% 0; } }
+.dash-skeleton-header {
+  height: 72px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.5rem;
+  background: linear-gradient(90deg, var(--sand-100) 25%, rgba(255,255,255,0.7) 50%, var(--sand-100) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.dash-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 1.25rem;
+}
+.dash-skeleton-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.dash-skeleton-card {
+  height: 100px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(90deg, var(--sand-100) 25%, rgba(255,255,255,0.7) 50%, var(--sand-100) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.dash-skeleton-card--tall { height: 240px; }
+
+/* ── Error state ─────────────────────────── */
+.dash-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 6rem 2rem;
+  text-align: center;
+  color: var(--txt3);
+}
+.dash-error svg { color: var(--coral-400); opacity: 0.7; }
+.dash-error h2 { font-family: var(--fd); font-size: 1.3rem; color: var(--txt); }
+.dash-error p { font-size: 0.9rem; color: var(--txt2); }
+
 /* ── Responsive ────────────────────────── */
 @media (max-width: 1100px) {
   .nutrition-cards { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 900px) {
+  .dash-skeleton-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-skeleton-grid--2 { grid-template-columns: 1fr; }
   .dash-grid { grid-template-columns: 1fr; }
   .nutrition-section,
   .weight-section,

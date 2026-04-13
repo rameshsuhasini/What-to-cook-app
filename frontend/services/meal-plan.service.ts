@@ -90,9 +90,10 @@ export const mealPlanApi = {
 
   generateAIMealPlan: async (
     weekStartDate: string,
-    preferences?: string
+    preferences?: string,
+    targetDates?: string[]
   ): Promise<WeekView> => {
-    await api.post('/ai/generate-meal-plan', { weekStartDate, preferences })
+    await api.post('/ai/generate-meal-plan', { weekStartDate, preferences, targetDates })
     // Fetch fresh week view after AI populates it
     const res = await api.get('/meal-plans/week', { params: { date: weekStartDate } })
     return res.data.data

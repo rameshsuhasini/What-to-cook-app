@@ -35,25 +35,27 @@ export default function DashboardPage() {
   const today = new Date()
   const greeting = getGreeting()
 
-  const { data: weightData } = useQuery({
+  const { data: weightData, isLoading: weightLoading } = useQuery({
     queryKey: ['weight-logs'],
     queryFn: () => healthApi.getWeightLogs({ limit: 30 }),
   })
 
-  const { data: nutritionData } = useQuery({
+  const { data: nutritionData, isLoading: nutritionLoading } = useQuery({
     queryKey: ['nutrition-today'],
     queryFn: () => healthApi.getNutritionLogs({ limit: 7 }),
   })
 
-  const { data: weekView } = useQuery({
+  const { data: weekView, isLoading: weekLoading, isError: weekError } = useQuery({
     queryKey: ['meal-plan-week'],
     queryFn: () => mealPlanApi.getWeekView(),
   })
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: profileApi.getProfile,
   })
+
+  const isLoading = weightLoading || nutritionLoading || weekLoading || profileLoading
 
   const {
     data: insights,
@@ -76,6 +78,32 @@ export default function DashboardPage() {
   const todayMeals = weekView?.days?.find(
     (d) => d.date === today.toISOString().split('T')[0]
   )
+
+  if (isLoading) {
+    return (
+      <div className="dash-root">
+        <div className="dash-skeleton-header" />
+        <div className="dash-skeleton-grid">
+          {[1,2,3,4].map(i => <div key={i} className="dash-skeleton-card" />)}
+        </div>
+        <div className="dash-skeleton-grid dash-skeleton-grid--2">
+          {[1,2].map(i => <div key={i} className="dash-skeleton-card dash-skeleton-card--tall" />)}
+        </div>
+      </div>
+    )
+  }
+
+  if (weekError) {
+    return (
+      <div className="dash-root">
+        <div className="dash-error">
+          <Target size={32} />
+          <h2>Couldn't load your dashboard</h2>
+          <p>Check your connection and refresh the page.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="dash-root">

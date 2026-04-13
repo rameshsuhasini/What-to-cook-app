@@ -61,6 +61,7 @@ export interface AIGeneratedRecipe {
 
 export interface GenerateMealPlanDTO {
   weekStartDate: string       // ISO date string
+  targetDates?: string[]      // Specific dates to fill (subset of the week)
   preferences?: string        // Any extra user instructions
 }
 

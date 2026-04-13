@@ -221,6 +221,13 @@ function AddMealModal({
 
 // ── AI generate modal ─────────────────────────────────────
 
+const AI_PRESETS = [
+  { label: 'Today',    days: 1 },
+  { label: '2 days',  days: 2 },
+  { label: '3 days',  days: 3 },
+  { label: 'Full week', days: 7 },
+]
+
 function AIGenerateModal({
   weekStartDate,
   weekRange,
@@ -234,9 +241,47 @@ function AIGenerateModal({
   hasExistingPlan: boolean
   isGenerating: boolean
   onClose: () => void
-  onConfirm: (preferences?: string) => void
+  onConfirm: (preferences?: string, targetDates?: string[]) => void
 }) {
   const [preferences, setPreferences] = useState('')
+
+  // Build the 7 ISO dates for the displayed week
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStartDate)
+    d.setUTCDate(d.getUTCDate() + i)
+    return d.toISOString().split('T')[0]
+  })
+
+  // Default selection: full week
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set(weekDates))
+  const [activePreset, setActivePreset] = useState<number>(7)
+
+  const todayISO = new Date().toISOString().split('T')[0]
+
+  const applyPreset = (days: number) => {
+    setActivePreset(days)
+    // Start from today if today is in this week, otherwise from Monday
+    const startFrom = weekDates.includes(todayISO) ? todayISO : weekDates[0]
+    const startIdx = weekDates.indexOf(startFrom)
+    const slice = new Set(weekDates.slice(startIdx, startIdx + days))
+    setSelectedDates(slice)
+  }
+
+  const toggleDate = (date: string) => {
+    setActivePreset(-1) // custom selection — clear preset highlight
+    setSelectedDates(prev => {
+      const next = new Set(prev)
+      if (next.has(date)) {
+        if (next.size === 1) return prev // keep at least 1
+        next.delete(date)
+      } else {
+        next.add(date)
+      }
+      return next
+    })
+  }
+
+  const selectedCount = selectedDates.size
 
   return (
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && !isGenerating && onClose()}>
@@ -247,6 +292,7 @@ function AIGenerateModal({
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
         transition={{ duration: 0.2 }}
       >
+        {/* Header */}
         <div className="ai-modal-header">
           <div className="ai-modal-title">
             <div className="ai-modal-icon"><Sparkles size={16} /></div>
@@ -256,9 +302,55 @@ function AIGenerateModal({
         </div>
 
         <div className="ai-modal-body">
+          {/* Week context */}
           <div className="ai-week-display">
             <Calendar size={14} />
-            Generating plan for <strong>{weekRange}</strong>
+            Week of <strong>{weekRange}</strong>
+          </div>
+
+          {/* Preset chips */}
+          <div className="ai-section">
+            <span className="ai-section-label">Quick select</span>
+            <div className="ai-presets">
+              {AI_PRESETS.map(p => (
+                <button
+                  key={p.days}
+                  className={`ai-preset-chip ${activePreset === p.days ? 'ai-preset-chip--active' : ''}`}
+                  onClick={() => applyPreset(p.days)}
+                  disabled={isGenerating}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Day grid */}
+          <div className="ai-section">
+            <span className="ai-section-label">
+              Adjust days
+              <span className="ai-section-count">{selectedCount} selected</span>
+            </span>
+            <div className="ai-day-grid">
+              {weekDates.map((date, i) => {
+                const isToday = date === todayISO
+                const d = new Date(date + 'T12:00:00')
+                const dayNum = d.getUTCDate()
+                const selected = selectedDates.has(date)
+                return (
+                  <button
+                    key={date}
+                    className={`ai-day-btn ${selected ? 'ai-day-btn--selected' : ''} ${isToday ? 'ai-day-btn--today' : ''}`}
+                    onClick={() => toggleDate(date)}
+                    disabled={isGenerating}
+                  >
+                    <span className="ai-day-name">{DAY_NAMES[i]}</span>
+                    <span className="ai-day-num">{dayNum}</span>
+                    {isToday && <span className="ai-day-today-dot" />}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {hasExistingPlan && (
@@ -274,7 +366,6 @@ function AIGenerateModal({
               placeholder="e.g. high protein week, Mediterranean theme, keep it under 30 min per meal…"
               value={preferences}
               onChange={(e) => setPreferences(e.target.value)}
-              autoFocus
               disabled={isGenerating}
             />
           </div>
@@ -282,7 +373,7 @@ function AIGenerateModal({
           {isGenerating && (
             <div className="ai-generating-status">
               <Loader2 size={14} className="ai-spin" />
-              Generating your 7-day meal plan… this may take 15–30 seconds
+              Generating your {selectedCount}-day meal plan… this may take 15–30 seconds
             </div>
           )}
         </div>
@@ -291,11 +382,11 @@ function AIGenerateModal({
           <button className="modal-cancel-btn" onClick={onClose} disabled={isGenerating}>Cancel</button>
           <button
             className="ai-confirm-btn"
-            onClick={() => onConfirm(preferences.trim() || undefined)}
+            onClick={() => onConfirm(preferences.trim() || undefined, Array.from(selectedDates))}
             disabled={isGenerating}
           >
             {isGenerating ? <Loader2 size={14} className="ai-spin" /> : <Sparkles size={14} />}
-            {isGenerating ? 'Generating…' : 'Generate week'}
+            {isGenerating ? 'Generating…' : `Generate ${selectedCount} day${selectedCount !== 1 ? 's' : ''}`}
           </button>
         </div>
       </motion.div>
@@ -438,6 +529,7 @@ export default function WeeklyPlannerPage() {
   const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()))
   const [addTarget, setAddTarget] = useState<SlotTarget | null>(null)
   const [editTarget, setEditTarget] = useState<MealPlanItem | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<MealPlanItem | null>(null)
   const [showAI, setShowAI] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'error' } | null>(null)
 
@@ -450,7 +542,7 @@ export default function WeeklyPlannerPage() {
   }
 
   // Fetch week
-  const { data: weekView, isLoading } = useQuery<WeekView>({
+  const { data: weekView, isLoading, isError } = useQuery<WeekView>({
     queryKey: ['meal-plan-week', weekStartISO],
     queryFn: () => mealPlanApi.getWeekView(weekStartISO),
   })
@@ -508,8 +600,8 @@ export default function WeeklyPlannerPage() {
 
   // AI generate
   const { mutate: generateAI, isPending: isGenerating } = useMutation({
-    mutationFn: (preferences?: string) =>
-      mealPlanApi.generateAIMealPlan(weekStartISO, preferences),
+    mutationFn: ({ preferences, targetDates }: { preferences?: string; targetDates?: string[] }) =>
+      mealPlanApi.generateAIMealPlan(weekStartISO, preferences, targetDates),
     onSuccess: () => {
       setShowAI(false)
       invalidate()
@@ -574,6 +666,11 @@ export default function WeeklyPlannerPage() {
         <div className="planner-loading">
           <Loader2 size={28} className="spin-icon" />
         </div>
+      ) : isError ? (
+        <div className="planner-error">
+          <Calendar size={32} />
+          <p>Couldn't load your meal plan. Check your connection and try again.</p>
+        </div>
       ) : (
         <motion.div
           className="planner-grid-wrap"
@@ -616,7 +713,7 @@ export default function WeeklyPlannerPage() {
                       {item ? (
                         <MealCard
                           item={item}
-                          onDelete={() => deleteMeal(item.id)}
+                          onDelete={() => setDeleteTarget(item)}
                           onEdit={() => setEditTarget(item)}
                           onClick={() => item.recipe && router.push(`/recipes/${item.recipe.id}`)}
                         />
@@ -694,8 +791,38 @@ export default function WeeklyPlannerPage() {
             hasExistingPlan={!!weekView?.mealPlan}
             isGenerating={isGenerating}
             onClose={() => !isGenerating && setShowAI(false)}
-            onConfirm={(prefs) => generateAI(prefs)}
+            onConfirm={(prefs, targetDates) => generateAI({ preferences: prefs, targetDates })}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete confirm modal ── */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <div className="planner-overlay" onClick={() => setDeleteTarget(null)}>
+            <motion.div
+              className="planner-confirm-modal"
+              onClick={e => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.18 }}
+            >
+              <p className="planner-confirm-title">Remove meal?</p>
+              <p className="planner-confirm-body">
+                "{deleteTarget.recipe?.title ?? deleteTarget.customMealName ?? 'This meal'}" will be removed from your plan.
+              </p>
+              <div className="planner-confirm-actions">
+                <button className="planner-confirm-cancel" onClick={() => setDeleteTarget(null)}>Cancel</button>
+                <button
+                  className="planner-confirm-delete"
+                  onClick={() => { deleteMeal(deleteTarget.id); setDeleteTarget(null) }}
+                >
+                  Remove
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

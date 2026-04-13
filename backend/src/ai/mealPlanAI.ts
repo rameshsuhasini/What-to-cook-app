@@ -22,9 +22,9 @@ const getWeekDates = (weekStartDate: string): string[] => {
   })
 }
 
-const buildSystemPrompt = (user: UserContext): string => `
+const buildSystemPrompt = (user: UserContext, dayCount: number): string => `
 You are an expert nutritionist and meal planning AI for the "What to Cook?" app.
-You create practical, delicious, and nutritionally balanced 7-day meal plans.
+You create practical, delicious, and nutritionally balanced ${dayCount}-day meal plans.
 
 USER PROFILE:
 - Name: ${user.name}
@@ -78,12 +78,13 @@ Respond with this exact JSON schema:
 
 const buildUserMessage = (
   dto: GenerateMealPlanDTO,
-  weekDates: string[],
+  targetDates: string[],
   user: UserContext
 ): string => {
   const parts = [
-    `Generate a 7-day meal plan for the week starting ${dto.weekStartDate}.`,
-    `The 7 dates are: ${weekDates.join(', ')}`,
+    `Generate a ${targetDates.length}-day meal plan.`,
+    `Fill ONLY these ${targetDates.length} date(s): ${targetDates.join(', ')}`,
+    `The "days" array in your response must contain exactly ${targetDates.length} entries — one per date listed above. Do not add or omit any dates.`,
   ]
 
   if (dto.preferences) {
@@ -99,9 +100,9 @@ const buildUserMessage = (
   return parts.join('\n')
 }
 
-const validateMealPlan = (plan: any): AIGeneratedMealPlan => {
-  if (!plan.days || !Array.isArray(plan.days) || plan.days.length !== 7) {
-    throw new Error('AI meal plan must have exactly 7 days')
+const validateMealPlan = (plan: any, expectedDays: number): AIGeneratedMealPlan => {
+  if (!plan.days || !Array.isArray(plan.days) || plan.days.length !== expectedDays) {
+    throw new Error(`AI meal plan must have exactly ${expectedDays} day(s), got ${plan.days?.length ?? 0}`)
   }
 
   for (const day of plan.days) {
@@ -121,13 +122,16 @@ export const generateMealPlan = async (
   dto: GenerateMealPlanDTO,
   user: UserContext
 ): Promise<AIGeneratedMealPlan> => {
-  const weekDates = getWeekDates(dto.weekStartDate)
+  // Use provided target dates, or fall back to full week
+  const targetDates = dto.targetDates && dto.targetDates.length > 0
+    ? dto.targetDates
+    : getWeekDates(dto.weekStartDate)
 
   const plan = await sendAIMessageJSON<AIGeneratedMealPlan>({
-    systemPrompt: buildSystemPrompt(user),
-    userMessage: buildUserMessage(dto, weekDates, user),
+    systemPrompt: buildSystemPrompt(user, targetDates.length),
+    userMessage: buildUserMessage(dto, targetDates, user),
     maxTokens: TOKEN_LIMITS.mealPlanGenerator,
   })
 
-  return validateMealPlan(plan)
+  return validateMealPlan(plan, targetDates.length)
 }
