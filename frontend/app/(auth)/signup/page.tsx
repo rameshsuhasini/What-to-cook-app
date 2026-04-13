@@ -49,7 +49,8 @@ export default function SignupPage() {
         { withCredentials: true }
       )
       setUser(res.data.data.user)
-      router.push('/dashboard')
+      // New users always go to onboarding first
+      router.push('/onboarding')
     } catch (err: any) {
       setServerError(
         err.response?.data?.message || 'Something went wrong. Please try again.'

@@ -38,7 +38,19 @@ export default function LoginPage() {
         { withCredentials: true },
       );
       setUser(res.data.data.user);
-      router.push("/dashboard");
+      // Check if profile is complete — redirect to onboarding if not
+      try {
+        const profileRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/profile`,
+          { withCredentials: true },
+        )
+        const profile = profileRes.data.data.profile
+        const isIncomplete = profile.dietType === 'NONE' && profile.calorieGoal === null
+        router.push(isIncomplete ? '/onboarding' : '/dashboard')
+      } catch {
+        // Profile fetch failed — go to dashboard, guard will handle it
+        router.push('/dashboard')
+      }
     } catch (err: any) {
       setServerError(
         err.response?.data?.message ||

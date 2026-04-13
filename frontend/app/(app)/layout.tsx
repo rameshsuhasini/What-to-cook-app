@@ -5,10 +5,12 @@ import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from '@/components/Sidebar'
 import BottomNav from '@/components/BottomNav'
+import { useOnboardingGuard } from '@/hooks/useOnboardingGuard'
 import '../layout.css'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  useOnboardingGuard()
 
   return (
     <div className="app-layout">
