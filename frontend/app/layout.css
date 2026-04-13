@@ -2,7 +2,7 @@
    App Layout — Sidebar Navigation
    ───────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=DM+Sans:wght@300;400;500;600&display=swap');
 
 :root {
   /* ── Brand colours ── */
@@ -11,6 +11,7 @@
   --teal-200: #5dcaa5;
   --teal-400: #1d9e75;
   --teal-600: #0f6e56;
+  --teal-700: #0d5e49;
   --teal-800: #085041;
 
   --coral-50:  #faece7;
@@ -24,6 +25,12 @@
   --amber-400: #ba7517;
   --amber-600: #854f0b;
 
+  /* ── Terracotta accent (warm, food-brand) ── */
+  --terra-50:  #fdf1ed;
+  --terra-100: #f8d4c6;
+  --terra-400: #c1440e;
+  --terra-600: #8d2e06;
+
   --blue-50:  #e6f1fb;
   --blue-400: #378add;
   --blue-600: #185fa5;
@@ -34,23 +41,24 @@
   --purple-50:  #f0ebfa;
   --purple-400: #8b5cf6;
 
-  --sand-50:  #faf9f6;
-  --sand-100: #f2f0eb;
-  --sand-200: #e4e0d8;
+  /* ── Warm neutrals (richer than pure white) ── */
+  --sand-50:  #faf7f4;
+  --sand-100: #f3ede7;
+  --sand-200: #e6ddd5;
 
   /* ── Text ── */
-  --txt:  #1a1a18;
-  --txt2: #5f5e5a;
-  --txt3: #8a8880;
+  --txt:  #1c1a17;
+  --txt2: #5c5752;
+  --txt3: #8a8278;
   /* Aliases used by some pages */
-  --text-primary:   #1a1a18;
-  --text-secondary: #5f5e5a;
-  --text-muted:     #8a8880;
+  --text-primary:   #1c1a17;
+  --text-secondary: #5c5752;
+  --text-muted:     #8a8278;
 
-  /* ── Cards ── */
-  --card-bg:     white;
-  --card-border: rgba(0,0,0,0.07);
-  --card-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  /* ── Cards (warm off-white instead of pure white) ── */
+  --card-bg:     #faf7f4;
+  --card-border: rgba(0,0,0,0.06);
+  --card-shadow: 0 2px 16px rgba(0,0,0,0.05);
 
   /* ── Radii ── */
   --radius-sm: 8px;
@@ -63,11 +71,12 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --shadow-hover: 0 8px 28px rgba(0,0,0,0.11);
 
-  /* ── Typography ── */
-  --fd: 'Playfair Display', Georgia, serif;
+  /* ── Typography (Fraunces = editorial serif with personality) ── */
+  --fd: 'Fraunces', Georgia, serif;
   --fb: 'DM Sans', system-ui, sans-serif;
-  --font-display: 'Playfair Display', Georgia, serif;
+  --font-display: 'Fraunces', Georgia, serif;
   --font-body:    'DM Sans', system-ui, sans-serif;
 
   /* ── Motion ── */
@@ -120,22 +129,45 @@
   min-height: 100vh;
   background: var(--sand-100);
   font-family: var(--fb);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── Sidebar ───────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
-  background: white;
+  background: #fdfbf8;
   border-right: 1px solid var(--sand-200);
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 0.75rem;
+  padding: 1.5rem 0.75rem 1rem;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow: visible;
   z-index: 50;
+}
+
+/* ── Sidebar greeting ──────────────────── */
+.sidebar-greeting {
+  padding: 0.6rem 0.75rem 1rem;
+  border-bottom: 1px solid var(--sand-200);
+  margin-bottom: 0.75rem;
+}
+
+.sidebar-greeting-time {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--teal-600);
+  margin-bottom: 2px;
+}
+
+.sidebar-greeting-date {
+  font-size: 0.75rem;
+  color: var(--txt3);
+  font-weight: 400;
 }
 
 .sidebar--collapsed .sidebar-logo {
@@ -237,28 +269,55 @@
 }
 
 .nav-item:hover {
-  background: var(--sand-50);
+  background: var(--sand-100);
   color: var(--txt);
 }
 
 .nav-active {
-  color: var(--teal-600);
-  font-weight: 500;
-  background: var(--teal-50);
+  color: white;
+  font-weight: 600;
 }
 
 .nav-indicator {
   position: absolute;
   inset: 0;
   border-radius: 10px;
-  background: var(--teal-50);
+  background: linear-gradient(135deg, var(--teal-400), var(--teal-600));
   z-index: 0;
+  box-shadow: 0 3px 10px rgba(29,158,117,0.3);
 }
 
 .nav-item svg,
 .nav-item span {
   position: relative;
   z-index: 1;
+}
+
+/* ── Sidebar streak badge ──────────────── */
+.sidebar-streak {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--terra-50), var(--amber-50));
+  border: 1px solid var(--terra-100);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-streak-emoji { font-size: 16px; flex-shrink: 0; }
+
+.sidebar-streak-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--terra-400);
+  line-height: 1.3;
+}
+
+.sidebar-streak-sub {
+  font-size: 0.68rem;
+  color: var(--txt3);
+  font-weight: 400;
 }
 
 /* ── Sidebar footer ────────────────────── */
@@ -268,6 +327,7 @@
   gap: 8px;
   padding-top: 1rem;
   border-top: 1px solid var(--sand-200);
+  margin-top: auto;
 }
 
 .sidebar-user {
@@ -392,6 +452,55 @@
 }
 .logout-confirm:hover { background: #993c1d; }
 
+/* ── Shared page header pattern ───────── */
+.page-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--teal-600);
+  margin-bottom: 4px;
+}
+
+.page-title {
+  font-family: var(--fd);
+  font-size: var(--page-title-size);
+  font-weight: 600;
+  color: var(--txt);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 10px;
+}
+
+.page-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 64px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--teal-400), transparent);
+}
+
+.page-subtitle {
+  font-size: 0.88rem;
+  color: var(--txt3);
+  font-weight: 300;
+  margin-top: 2px;
+}
+
+/* ── Shared card improvements ──────────── */
+.card-hover {
+  transition: transform 200ms var(--ease), box-shadow 200ms var(--ease);
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
+}
+
 /* ── Main ──────────────────────────────── */
 .app-main {
   flex: 1;
@@ -450,10 +559,12 @@
     left: 0;
     right: 0;
     z-index: 200;
-    background: white;
+    background: rgba(250, 247, 244, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid var(--sand-200);
-    padding: 6px 0 env(safe-area-inset-bottom, 6px);
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+    padding: 6px 8px env(safe-area-inset-bottom, 8px);
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
   }
 
   .bottom-nav-item {
@@ -466,7 +577,7 @@
     padding: 6px 4px;
     text-decoration: none;
     color: var(--txt3);
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     font-weight: 500;
     letter-spacing: 0.02em;
     transition: color 150ms;
@@ -476,17 +587,21 @@
     border: none;
     font-family: var(--fb);
     position: relative;
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   .bottom-nav-item svg {
     width: 22px;
     height: 22px;
     stroke-width: 1.75;
+    position: relative;
+    z-index: 1;
   }
 
+  .bottom-nav-item span { position: relative; z-index: 1; }
+
   .bottom-nav-item--active {
-    color: var(--teal-600);
+    color: var(--teal-700);
   }
 
   .bottom-nav-item--active svg {

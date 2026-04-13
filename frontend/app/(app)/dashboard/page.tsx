@@ -1,8 +1,8 @@
 'use client'
 
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import {
   Sparkles, TrendingUp, TrendingDown, ChefHat,
   Calendar, ShoppingCart, Apple, Flame,
@@ -105,24 +105,76 @@ export default function DashboardPage() {
     )
   }
 
+  const todayStr = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+  const firstName = user?.name?.split(' ')[0] ?? 'Chef'
+
   return (
     <div className="dash-root">
-      {/* ── Header ── */}
-      <motion.header
-        className="dash-header"
+      {/* ── Hero card ── */}
+      <motion.div
+        className="dash-hero"
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div>
-          <p className="dash-greeting">{greeting}</p>
-          <h1 className="dash-name">{user?.name?.split(' ')[0] ?? 'Chef'} 👋</h1>
+        <div className="dash-hero-left">
+          <p className="dash-hero-greeting">{greeting},</p>
+          <h1 className="dash-hero-name">{firstName} 👋</h1>
+          <p className="dash-hero-date">
+            <Calendar size={13} />
+            {todayStr}
+          </p>
         </div>
-        <div className="dash-date">
-          <Calendar size={14} />
-          <span>{today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+        <div className="dash-hero-right">
+          {/* Calorie progress ring — hero version */}
+          <div className="dash-hero-ring">
+            <svg width="96" height="96" viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="38" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="6" />
+              <circle
+                cx="48" cy="48" r="38" fill="none"
+                stroke="white"
+                strokeWidth="6"
+                strokeDasharray={`${Math.min(100,(calorieGoal > 0 ? ((todayNutrition?.calories ?? 0) / calorieGoal) * 100 : 0))/100 * 2 * Math.PI * 38} ${2 * Math.PI * 38}`}
+                strokeLinecap="round"
+                transform="rotate(-90 48 48)"
+              />
+            </svg>
+            <div className="dash-hero-ring-center">
+              <span className="dash-hero-ring-val">{todayNutrition?.calories ?? 0}</span>
+              <span className="dash-hero-ring-unit">kcal</span>
+            </div>
+          </div>
+          <p className="dash-hero-ring-label">Today's calories</p>
         </div>
-      </motion.header>
+        <div className="dash-hero-decoration" />
+      </motion.div>
+
+      {/* ── Today's plan strip ── */}
+      {todayMeals && (
+        <motion.div
+          className="dash-today-strip"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <span className="dash-today-strip-label">Today's plan</span>
+          {(['breakfast','lunch','dinner','snack'] as const).map((slot, i) => {
+            const icons = ['🌅','☀️','🌙','🍎']
+            const meal = todayMeals[slot]
+            return (
+              <div key={slot} className={`dash-strip-slot ${meal ? 'dash-strip-slot--filled' : ''}`}>
+                <span className="dash-strip-icon">{icons[i]}</span>
+                <span className="dash-strip-name">
+                  {meal ? (meal.recipe?.title ?? meal.customMealName ?? 'Custom') : '—'}
+                </span>
+              </div>
+            )
+          })}
+          <Link href="/weekly-planner" className="dash-strip-link">
+            Edit plan <ArrowRight size={12} />
+          </Link>
+        </motion.div>
+      )}
 
       {/* ── Main grid ── */}
       <div className="dash-grid">
@@ -280,6 +332,20 @@ function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string })
   )
 }
 
+function AnimatedNumber({ value }: { value: number }) {
+  const mv = useMotionValue(0)
+  const rounded = useTransform(mv, (v) => Math.round(v))
+  const [display, setDisplay] = useState(0)
+
+  useEffect(() => {
+    const controls = animate(mv, value, { duration: 0.9, ease: 'easeOut' })
+    const unsub = rounded.on('change', setDisplay)
+    return () => { controls.stop(); unsub() }
+  }, [value, mv, rounded])
+
+  return <>{display}</>
+}
+
 function NutritionRing({
   label, value, goal, unit, color, icon,
 }: {
@@ -292,29 +358,36 @@ function NutritionRing({
   const dash = (pct / 100) * circ
 
   return (
-    <div className={`nutrition-card nutrition-${color}`}>
+    <motion.div
+      className={`nutrition-card nutrition-${color}`}
+      whileHover={{ y: -4, boxShadow: '0 10px 28px rgba(0,0,0,0.11)' }}
+      transition={{ duration: 0.2 }}
+    >
       <div className="ring-wrap">
         <svg width="72" height="72" viewBox="0 0 72 72">
           <circle cx="36" cy="36" r={r} fill="none" className="ring-track" strokeWidth="5" />
-          <circle
+          <motion.circle
             cx="36" cy="36" r={r} fill="none"
             className="ring-fill"
             strokeWidth="5"
-            strokeDasharray={`${dash} ${circ}`}
             strokeLinecap="round"
             transform="rotate(-90 36 36)"
+            initial={{ strokeDasharray: `0 ${circ}` }}
+            animate={{ strokeDasharray: `${dash} ${circ}` }}
+            transition={{ duration: 0.9, ease: 'easeOut' }}
           />
         </svg>
-        <div className="ring-center">
-          {icon}
-        </div>
+        <div className="ring-center">{icon}</div>
       </div>
       <div className="nutrition-info">
-        <span className="nutrition-value">{value}<span className="nutrition-unit">{unit}</span></span>
+        <span className="nutrition-value">
+          <AnimatedNumber value={value} />
+          <span className="nutrition-unit">{unit}</span>
+        </span>
         <span className="nutrition-label">{label}</span>
         <span className="nutrition-goal">of {goal}{unit}</span>
       </div>
-    </div>
+    </motion.div>
   )
 }
 

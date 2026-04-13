@@ -279,20 +279,20 @@
 
 /* ── Recipe card ─────────────────────── */
 .recipe-card {
-  background: white;
-  border: 1px solid var(--sand-200);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
-  transition: transform var(--transition), box-shadow var(--transition);
+  transition: transform 200ms var(--ease), box-shadow 200ms var(--ease);
   position: relative;
   display: flex;
   flex-direction: column;
 }
 
 .recipe-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 14px 36px rgba(0,0,0,0.12);
 }
 
 /* Card image */

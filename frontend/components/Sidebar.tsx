@@ -25,6 +25,20 @@ const NAV_ITEMS = [
 
 const COLLAPSED_KEY = 'sidebar-collapsed'
 
+function getSidebarGreeting() {
+  const h = new Date().getHours()
+  if (h < 5)  return 'Good night'
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function getSidebarDate() {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  })
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -95,6 +109,22 @@ export default function Sidebar() {
         {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
 
+      {/* ── Greeting ── */}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            className="sidebar-greeting"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <div className="sidebar-greeting-time">{getSidebarGreeting()}</div>
+            <div className="sidebar-greeting-date">{getSidebarDate()}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Nav ── */}
       <nav className="sidebar-nav">
         {NAV_ITEMS.map((item) => {
@@ -132,6 +162,25 @@ export default function Sidebar() {
           )
         })}
       </nav>
+
+      {/* ── Streak badge ── */}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            className="sidebar-streak"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <span className="sidebar-streak-emoji">🔥</span>
+            <div>
+              <div className="sidebar-streak-text">Keep it up!</div>
+              <div className="sidebar-streak-sub">Log meals daily to build your streak</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Footer ── */}
       <div className="sidebar-footer">
