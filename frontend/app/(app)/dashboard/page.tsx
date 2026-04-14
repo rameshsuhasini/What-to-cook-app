@@ -1,11 +1,11 @@
 'use client'
 
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Sparkles, TrendingUp, TrendingDown, ChefHat,
-  Calendar, ShoppingCart, Apple, Flame,
+  Calendar, Flame,
   Beef, Wheat, Droplets, ArrowRight, RefreshCw,
   Target, Award
 } from 'lucide-react'
@@ -30,11 +30,35 @@ const fadeUp = {
   }),
 }
 
+// ── Fallback insight shown on first visit / API error ──
+const FALLBACK_INSIGHT = {
+  overview: "Eating consistent meals at regular intervals helps stabilise blood sugar and reduces the urge to snack on processed foods. Building a routine around meal timing is one of the most underrated nutrition habits.",
+  recommendations: [
+    "Aim for 25–30 g of protein per meal to support muscle maintenance and satiety.",
+    "Drink a glass of water before each meal — mild dehydration often mimics hunger.",
+    "Prep tomorrow's meals tonight so healthy choices are effortless on busy days.",
+  ],
+  motivationalMessage: "Every nutritious choice you make today is an investment in the energy and vitality you'll feel tomorrow.",
+}
+
+const MAX_DAILY_REFRESHES = 3
+
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const today = new Date()
   const greeting = getGreeting()
+  const todayDateStr = today.toISOString().split('T')[0]
 
+  // ── Insight state ────────────────────────
+  const [insight, setInsight] = useState<any>(null)
+  const [insightLoading, setInsightLoading] = useState(false)
+  const [insightRefreshCount, setInsightRefreshCount] = useState(0)
+  const insightFetchedRef = useRef(false)
+
+  const insightCacheKey = `dash_insight_${user?.id ?? 'guest'}_${todayDateStr}`
+  const insightCountKey  = `dash_insight_refreshes_${user?.id ?? 'guest'}_${todayDateStr}`
+
+  // ── Server queries ───────────────────────
   const { data: weightData, isLoading: weightLoading } = useQuery({
     queryKey: ['weight-logs'],
     queryFn: () => healthApi.getWeightLogs({ limit: 30 }),
@@ -57,18 +81,50 @@ export default function DashboardPage() {
 
   const isLoading = weightLoading || nutritionLoading || weekLoading || profileLoading
 
-  const {
-    data: insights,
-    mutate: fetchInsights,
-    isPending: insightsLoading,
-  } = useMutation({
-    mutationFn: () => aiApi.generateHealthInsights(),
-  })
+  // ── Auto-load insight on mount ───────────
+  useEffect(() => {
+    if (insightFetchedRef.current) return
+    insightFetchedRef.current = true
 
-  // Use today's logged nutrition only — never yesterday's data
+    const cached = localStorage.getItem(insightCacheKey)
+    const count  = parseInt(localStorage.getItem(insightCountKey) ?? '0', 10)
+    setInsightRefreshCount(count)
+
+    if (cached) {
+      try { setInsight(JSON.parse(cached)) } catch { setInsight(FALLBACK_INSIGHT) }
+    } else {
+      // First visit today — auto-fetch once (does not count toward limit)
+      setInsightLoading(true)
+      aiApi.generateHealthInsights()
+        .then((result) => {
+          setInsight(result)
+          localStorage.setItem(insightCacheKey, JSON.stringify(result))
+        })
+        .catch(() => {
+          setInsight(FALLBACK_INSIGHT)
+          localStorage.setItem(insightCacheKey, JSON.stringify(FALLBACK_INSIGHT))
+        })
+        .finally(() => setInsightLoading(false))
+    }
+  }, [insightCacheKey, insightCountKey])
+
+  function handleRefreshInsight() {
+    if (insightLoading || insightRefreshCount >= MAX_DAILY_REFRESHES) return
+    setInsightLoading(true)
+    aiApi.generateHealthInsights()
+      .then((result) => {
+        setInsight(result)
+        localStorage.setItem(insightCacheKey, JSON.stringify(result))
+        const next = insightRefreshCount + 1
+        setInsightRefreshCount(next)
+        localStorage.setItem(insightCountKey, String(next))
+      })
+      .catch(() => { /* keep current insight */ })
+      .finally(() => setInsightLoading(false))
+  }
+
+  // ── Derived values ───────────────────────
   const todayNutrition = nutritionData?.today ?? null
-
-  // Goals from profile; fall back to sensible defaults if not set
   const calorieGoal = profile?.calorieGoal ?? 2000
   const proteinGoal = profile?.proteinGoal ?? 150
   const carbGoal    = profile?.carbGoal    ?? 200
@@ -76,7 +132,7 @@ export default function DashboardPage() {
   const hasCustomGoals = !!(profile?.calorieGoal || profile?.proteinGoal || profile?.carbGoal || profile?.fatGoal)
 
   const todayMeals = weekView?.days?.find(
-    (d) => d.date === today.toISOString().split('T')[0]
+    (d) => d.date === todayDateStr
   )
 
   if (isLoading) {
@@ -105,8 +161,9 @@ export default function DashboardPage() {
     )
   }
 
-  const todayStr = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+  const todayStr  = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
   const firstName = user?.name?.split(' ')[0] ?? 'Chef'
+  const refreshesLeft = MAX_DAILY_REFRESHES - insightRefreshCount
 
   return (
     <div className="dash-root">
@@ -148,33 +205,6 @@ export default function DashboardPage() {
         </div>
         <div className="dash-hero-decoration" />
       </motion.div>
-
-      {/* ── Today's plan strip ── */}
-      {todayMeals && (
-        <motion.div
-          className="dash-today-strip"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-        >
-          <span className="dash-today-strip-label">Today's plan</span>
-          {(['breakfast','lunch','dinner','snack'] as const).map((slot, i) => {
-            const icons = ['🌅','☀️','🌙','🍎']
-            const meal = todayMeals[slot]
-            return (
-              <div key={slot} className={`dash-strip-slot ${meal ? 'dash-strip-slot--filled' : ''}`}>
-                <span className="dash-strip-icon">{icons[i]}</span>
-                <span className="dash-strip-name">
-                  {meal ? (meal.recipe?.title ?? meal.customMealName ?? 'Custom') : '—'}
-                </span>
-              </div>
-            )
-          })}
-          <Link href="/weekly-planner" className="dash-strip-link">
-            Edit plan <ArrowRight size={12} />
-          </Link>
-        </motion.div>
-      )}
 
       {/* ── Main grid ── */}
       <div className="dash-grid">
@@ -264,17 +294,22 @@ export default function DashboardPage() {
           initial="hidden" animate="visible"
         >
           <div className="card-header">
-            <SectionLabel icon={<Sparkles size={14} />} label="AI health insights" />
+            <SectionLabel icon={<Sparkles size={14} />} label="AI health insight" />
             <button
               className="refresh-btn"
-              onClick={() => fetchInsights()}
-              disabled={insightsLoading}
+              onClick={handleRefreshInsight}
+              disabled={insightLoading || insightRefreshCount >= MAX_DAILY_REFRESHES}
+              title={insightRefreshCount >= MAX_DAILY_REFRESHES ? 'Daily refresh limit reached' : `${refreshesLeft} refresh${refreshesLeft !== 1 ? 'es' : ''} left today`}
             >
-              <RefreshCw size={13} className={insightsLoading ? 'spin' : ''} />
-              {insightsLoading ? 'Analysing...' : 'Refresh'}
+              <RefreshCw size={13} className={insightLoading ? 'spin' : ''} />
+              {insightLoading
+                ? 'Analysing...'
+                : insightRefreshCount >= MAX_DAILY_REFRESHES
+                  ? 'Limit reached'
+                  : 'Refresh'}
             </button>
           </div>
-          <HealthInsights insights={insights} loading={insightsLoading} />
+          <HealthInsights insight={insight} loading={insightLoading} />
         </motion.section>
 
         {/* ── Quick actions ── */}
@@ -497,37 +532,37 @@ function TodayMeals({ meals }: { meals: any }) {
   )
 }
 
-function HealthInsights({ insights, loading }: { insights: any; loading: boolean }) {
+function HealthInsights({ insight, loading }: { insight: any; loading: boolean }) {
   if (loading) {
     return (
       <div className="insights-loading">
         <div className="ai-pulse">
           <Sparkles size={24} />
         </div>
-        <p>Analysing your health data...</p>
+        <p>Generating your daily insight...</p>
       </div>
     )
   }
 
-  if (!insights) {
+  if (!insight) {
     return (
       <div className="insights-empty">
         <div className="insights-empty-icon">
           <Sparkles size={28} strokeWidth={1.5} />
         </div>
-        <p>Get personalised health insights powered by AI.</p>
-        <p className="insights-hint">Click Refresh to analyse your data.</p>
+        <p>Your personalised insight is loading.</p>
+        <p className="insights-hint">This auto-generates once per day.</p>
       </div>
     )
   }
 
   return (
     <div className="insights-content">
-      <p className="insights-overview">{insights.overview}</p>
+      <p className="insights-overview">{insight.overview}</p>
 
-      {insights.recommendations?.length > 0 && (
+      {insight.recommendations?.length > 0 && (
         <div className="insights-recommendations">
-          {insights.recommendations.slice(0, 3).map((rec: string, i: number) => (
+          {insight.recommendations.slice(0, 3).map((rec: string, i: number) => (
             <div key={i} className="rec-item">
               <Award size={12} />
               <span>{rec}</span>
@@ -536,10 +571,10 @@ function HealthInsights({ insights, loading }: { insights: any; loading: boolean
         </div>
       )}
 
-      {insights.motivationalMessage && (
+      {insight.motivationalMessage && (
         <div className="insights-motivation">
           <span className="motivation-icon">✨</span>
-          <p>{insights.motivationalMessage}</p>
+          <p>{insight.motivationalMessage}</p>
         </div>
       )}
     </div>

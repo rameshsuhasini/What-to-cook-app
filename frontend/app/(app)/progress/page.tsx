@@ -530,35 +530,91 @@ export default function ProgressPage() {
               </ResponsiveContainer>
             )}
 
-            {nutritionLogs.length > 0 && (
-              <div className="pg-nutrition-table">
-                <h3 className="pg-log-title">Macro breakdown</h3>
-                <div className="pg-table-wrap">
-                  <table className="pg-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Calories</th>
-                        <th>Protein</th>
-                        <th>Carbs</th>
-                        <th>Fat</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {nutritionLogs.slice(0, 10).map(log => (
-                        <tr key={log.id}>
-                          <td>{new Date(log.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</td>
-                          <td className="pg-td--calories">{log.calories} kcal</td>
-                          <td>{log.protein}g</td>
-                          <td>{log.carbs}g</td>
-                          <td>{log.fat}g</td>
+            {nutritionLogs.length > 0 && (() => {
+              // Newest first for the table
+              const tableRows = [...nutritionLogs]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 10)
+              return (
+                <div className="pg-nutrition-table">
+                  <h3 className="pg-log-title">Macro breakdown</h3>
+                  <div className="pg-table-wrap">
+                    <table className="pg-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Calories</th>
+                          <th>Protein</th>
+                          <th>Carbs</th>
+                          <th>Fat</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {tableRows.map((log, i) => {
+                          // Previous day's entry is the next item in the newest-first array
+                          const prev = tableRows[i + 1]
+                          const calDiff  = prev ? log.calories - prev.calories : null
+                          const protDiff = prev ? log.protein  - prev.protein  : null
+                          const carbDiff = prev ? log.carbs    - prev.carbs    : null
+                          const fatDiff  = prev ? log.fat      - prev.fat      : null
+                          return (
+                            <tr key={log.id}>
+                              <td>
+                                {new Date(log.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                              </td>
+                              <td>
+                                <div className="pg-td-cell">
+                                  <span className="pg-td--calories">{log.calories} kcal</span>
+                                  {calDiff != null && calDiff !== 0 && (
+                                    <span className={`pg-log-diff pg-log-diff--${calDiff > 0 ? 'up' : 'down'}`}>
+                                      {calDiff > 0 ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+                                      {Math.abs(calDiff)}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td>
+                                <div className="pg-td-cell">
+                                  {log.protein}g
+                                  {protDiff != null && protDiff !== 0 && (
+                                    <span className={`pg-log-diff pg-log-diff--${protDiff > 0 ? 'up' : 'down'}`}>
+                                      {protDiff > 0 ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+                                      {Math.abs(protDiff)}g
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td>
+                                <div className="pg-td-cell">
+                                  {log.carbs}g
+                                  {carbDiff != null && carbDiff !== 0 && (
+                                    <span className={`pg-log-diff pg-log-diff--${carbDiff > 0 ? 'up' : 'down'}`}>
+                                      {carbDiff > 0 ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+                                      {Math.abs(carbDiff)}g
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td>
+                                <div className="pg-td-cell">
+                                  {log.fat}g
+                                  {fatDiff != null && fatDiff !== 0 && (
+                                    <span className={`pg-log-diff pg-log-diff--${fatDiff > 0 ? 'up' : 'down'}`}>
+                                      {fatDiff > 0 ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+                                      {Math.abs(fatDiff)}g
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
           </motion.div>
         )}
       </AnimatePresence>

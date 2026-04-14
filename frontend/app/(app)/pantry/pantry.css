@@ -142,6 +142,152 @@
 }
 .pt-btn--danger:active:not(:disabled) { transform: translateY(0); }
 
+/* AI suggestions — teal tint, sits between ghost and primary */
+.pt-btn--ai {
+  background: linear-gradient(135deg, rgba(29,158,117,0.1), rgba(15,110,86,0.08));
+  color: var(--teal-600);
+  border: 1.5px solid rgba(29,158,117,0.25);
+  box-shadow: 0 1px 4px rgba(29,158,117,0.12);
+}
+.pt-btn--ai:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(29,158,117,0.16), rgba(15,110,86,0.13));
+  border-color: rgba(29,158,117,0.4);
+  box-shadow: 0 3px 12px rgba(29,158,117,0.2);
+  transform: translateY(-1px);
+}
+.pt-btn--ai:active:not(:disabled) { transform: translateY(0); }
+
+/* Icon-only button (⋯) */
+.pt-btn--icon {
+  padding: 9px 10px;
+}
+
+/* ── Shelf menu button & cancel ─────────── */
+.pt-shelf-overflow-wrap {
+  position: relative;
+  margin-left: auto;
+}
+
+.pt-shelf-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  color: var(--txt3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.pt-shelf-menu-btn:hover {
+  background: rgba(0,0,0,0.06);
+  color: var(--txt2);
+}
+
+.pt-shelf-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: white;
+  border: 1.5px solid var(--sand-200);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.11), 0 2px 6px rgba(0,0,0,0.06);
+  min-width: 178px;
+  z-index: 50;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.pt-shelf-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--teal-600);
+  background: var(--teal-50);
+  border: 1px solid var(--teal-100);
+  border-radius: 99px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: var(--fb);
+  margin-left: 6px;
+  transition: all var(--transition);
+}
+.pt-shelf-cancel-btn:hover {
+  background: var(--teal-100);
+}
+
+/* ── Overflow menu (global / shared) ────── */
+.pt-overflow-wrap {
+  position: relative;
+}
+
+.pt-overflow-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: white;
+  border: 1.5px solid var(--sand-200);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  min-width: 190px;
+  z-index: 50;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.pt-overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  font-family: var(--fb);
+  font-size: 0.855rem;
+  font-weight: 500;
+  color: var(--txt2);
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition), color var(--transition);
+}
+.pt-overflow-item:hover {
+  background: var(--sand-50);
+  color: var(--txt);
+}
+.pt-overflow-item svg {
+  color: var(--txt3);
+  flex-shrink: 0;
+}
+.pt-overflow-item:hover svg {
+  color: var(--txt2);
+}
+
+.pt-overflow-item--danger {
+  color: var(--coral-600);
+}
+.pt-overflow-item--danger:hover {
+  background: var(--coral-50);
+  color: var(--coral-600);
+}
+.pt-overflow-item--danger svg {
+  color: var(--coral-400);
+}
+.pt-overflow-item--danger:hover svg {
+  color: var(--coral-600);
+}
+
+.pt-overflow-divider {
+  height: 1px;
+  background: var(--sand-100);
+  margin: 3px 4px;
+}
+
 .pt-spin { animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -223,27 +369,6 @@
 }
 .pt-search-clear:hover { background: var(--sand-200); color: var(--txt); }
 
-/* ── Clear button ───────────────────────── */
-.pt-clear-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--txt3);
-  padding: 5px 10px;
-  border-radius: 7px;
-  font-family: var(--fb);
-  transition: all var(--transition);
-  white-space: nowrap;
-}
-.pt-clear-btn:hover {
-  color: var(--coral-400);
-  background: var(--coral-50);
-}
 
 /* ── Mode banner ────────────────────────── */
 .pt-mode-banner {
@@ -404,10 +529,11 @@
 }
 .pt-chip:hover {
   background: rgba(0,0,0,0.07);
+  border-color: rgba(0,0,0,0.14);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.09);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
-.pt-chip:active { transform: translateY(0); }
+.pt-chip:active { transform: translateY(0); box-shadow: none; }
 
 /* Chip states */
 .pt-chip--selectable {

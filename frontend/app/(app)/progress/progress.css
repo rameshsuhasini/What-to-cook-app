@@ -504,6 +504,13 @@
 .pg-table tr:last-child td { border-bottom: none; }
 .pg-td--calories { font-weight: 600; color: var(--teal-600); }
 
+.pg-td-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 /* ── Modal ──────────────────────────────── */
 .pg-overlay {
   position: fixed;

@@ -135,76 +135,6 @@ body {
   left: -120px;
 }
 
-/* ── Today's plan strip ─────────────────── */
-.dash-today-strip {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg);
-  padding: 0.875rem 1.25rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--card-shadow);
-  overflow-x: auto;
-  flex-wrap: nowrap;
-}
-
-.dash-today-strip-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--txt3);
-  white-space: nowrap;
-  margin-right: 0.25rem;
-  flex-shrink: 0;
-}
-
-.dash-strip-slot {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 99px;
-  background: var(--sand-100);
-  border: 1px solid var(--sand-200);
-  flex-shrink: 0;
-}
-
-.dash-strip-slot--filled {
-  background: var(--teal-50);
-  border-color: var(--teal-100);
-}
-
-.dash-strip-icon { font-size: 13px; }
-
-.dash-strip-name {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--txt2);
-  white-space: nowrap;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dash-strip-slot--filled .dash-strip-name { color: var(--teal-700); }
-
-.dash-strip-link {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--teal-400);
-  text-decoration: none;
-  white-space: nowrap;
-  margin-left: auto;
-  flex-shrink: 0;
-  transition: color 150ms;
-}
-.dash-strip-link:hover { color: var(--teal-600); }
 
 /* ── Grid ──────────────────────────────── */
 .dash-grid {
@@ -763,7 +693,6 @@ body {
 @media (max-width: 640px) {
   .dash-hero { flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.25rem 1.25rem; }
   .dash-hero-right { flex-direction: row; align-items: center; gap: 1rem; }
-  .dash-today-strip { gap: 0.4rem; padding: 0.75rem 1rem; }
 }
 
 @media (max-width: 900px) {

@@ -2,10 +2,10 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   Package, Plus, Trash2, Search, Sparkles, RefreshCw,
-  X, Check, Edit2, GitMerge, AlertTriangle, CheckSquare,
+  X, Check, Edit2, AlertTriangle, CheckSquare, MoreHorizontal,
 } from 'lucide-react'
 import {
   pantryApi,
@@ -84,8 +84,6 @@ const SHELF_META: Record<string, {
 
 const UNITS = ['g', 'kg', 'ml', 'l', 'pcs', 'cups', 'tbsp', 'tsp', 'oz', 'lb']
 
-type SelectMode = 'delete' | 'merge' | null
-
 export default function PantryPage() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
@@ -94,15 +92,31 @@ export default function PantryPage() {
   const [editItem, setEditItem] = useState<PantryItem | null>(null)
   const [showAiPanel, setShowAiPanel] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
-  const [selectMode, setSelectMode] = useState<SelectMode>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [mergeConfirm, setMergeConfirm] = useState<{ a: PantryItem; b: PantryItem } | null>(null)
-  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  // Per-shelf select mode
+  const [shelfSelectMode, setShelfSelectMode] = useState<string | null>(null) // category name
+  const [shelfSelectedIds, setShelfSelectedIds] = useState<Set<string>>(new Set())
+  // Per-shelf menu & clear
+  const [openShelfMenu, setOpenShelfMenu] = useState<string | null>(null)
+  const [clearShelfConfirm, setClearShelfConfirm] = useState<string | null>(null)
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
   }
+
+  // Close shelf menu on outside click
+  useEffect(() => {
+    if (!openShelfMenu) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node
+      const wraps = document.querySelectorAll('.pt-shelf-overflow-wrap')
+      if (!Array.from(wraps).some((w) => w.contains(target))) {
+        setOpenShelfMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [openShelfMenu])
 
   const handleSearchChange = useCallback((val: string) => {
     setSearch(val)
@@ -159,53 +173,37 @@ export default function PantryPage() {
     mutationFn: (ids: string[]) => Promise.all(ids.map((id) => pantryApi.deleteItem(id))),
     onSuccess: (_, ids) => {
       queryClient.invalidateQueries({ queryKey: ['pantry'] })
-      setSelectedIds(new Set())
-      setSelectMode(null)
+      setShelfSelectedIds(new Set())
+      setShelfSelectMode(null)
       showToast(`${ids.length} item${ids.length > 1 ? 's' : ''} removed.`)
     },
     onError: () => showToast('Failed to delete items', 'error'),
   })
 
-  const clearMutation = useMutation({
-    mutationFn: () => pantryApi.clearPantry(),
+  const clearShelfMutation = useMutation({
+    mutationFn: (ids: string[]) => Promise.all(ids.map((id) => pantryApi.deleteItem(id))),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pantry'] })
-      setShowClearConfirm(false)
-      showToast('Pantry cleared.')
+      setClearShelfConfirm(null)
+      showToast('Shelf cleared.')
     },
+    onError: () => showToast('Failed to clear shelf', 'error'),
   })
 
-  const mergeMutation = useMutation({
-    mutationFn: ({ keepId, mergeId }: { keepId: string; mergeId: string }) =>
-      pantryApi.mergeItems(keepId, mergeId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pantry'] })
-      setMergeConfirm(null)
-      setSelectedIds(new Set())
-      setSelectMode(null)
-      showToast('Items merged!')
-    },
-    onError: (err: Error) => showToast(err.message || 'Failed to merge', 'error'),
-  })
+  // ── Per-shelf selection helpers ──────────
 
-  // ── Selection helpers ────────────────────
-
-  const toggleSelect = (item: PantryItem) => {
-    setSelectedIds((prev) => {
+  const toggleShelfSelect = (item: PantryItem) => {
+    setShelfSelectedIds((prev) => {
       const next = new Set(prev)
-      if (next.has(item.id)) {
-        next.delete(item.id)
-      } else {
-        if (selectMode === 'merge' && next.size >= 2) return prev
-        next.add(item.id)
-      }
+      if (next.has(item.id)) next.delete(item.id)
+      else next.add(item.id)
       return next
     })
   }
 
-  const exitSelectMode = () => {
-    setSelectMode(null)
-    setSelectedIds(new Set())
+  const exitShelfSelectMode = () => {
+    setShelfSelectMode(null)
+    setShelfSelectedIds(new Set())
   }
 
   // ── Grouping ─────────────────────────────
@@ -223,8 +221,6 @@ export default function PantryPage() {
   const shelves = SHELF_ORDER
     .filter((cat) => grouped.has(cat))
     .map((cat) => ({ cat, items: grouped.get(cat)! }))
-
-  const selectedItems = items.filter((i) => selectedIds.has(i.id))
 
   const handleAiClick = () => {
     setShowAiPanel(true)
@@ -260,34 +256,14 @@ export default function PantryPage() {
           <h1 className="pt-title">My Pantry</h1>
         </div>
         <div className="pt-header-actions">
-          <button className="pt-btn pt-btn--ghost" onClick={handleAiClick}>
+          <button className="pt-btn pt-btn--ai" onClick={handleAiClick}>
             <Sparkles size={15} />
             AI suggestions
           </button>
-          {selectMode === null ? (
-            <>
-              <button className="pt-btn pt-btn--ghost" onClick={() => setSelectMode('merge')}>
-                <GitMerge size={15} />
-                Merge
-              </button>
-              <button className="pt-btn pt-btn--ghost" onClick={() => setSelectMode('delete')}>
-                <CheckSquare size={15} />
-                Select
-              </button>
-              <button
-                className="pt-btn pt-btn--primary"
-                onClick={() => setShowAddModal(true)}
-              >
-                <Plus size={15} />
-                Add item
-              </button>
-            </>
-          ) : (
-            <button className="pt-btn pt-btn--ghost" onClick={exitSelectMode}>
-              <X size={15} />
-              Cancel
-            </button>
-          )}
+          <button className="pt-btn pt-btn--primary" onClick={() => setShowAddModal(true)}>
+            <Plus size={15} />
+            Add item
+          </button>
         </div>
       </motion.header>
 
@@ -318,38 +294,9 @@ export default function PantryPage() {
               <Package size={13} />
               {total} item{total !== 1 ? 's' : ''} · {shelves.length} categor{shelves.length !== 1 ? 'ies' : 'y'}
             </span>
-            <button className="pt-clear-btn" onClick={() => setShowClearConfirm(true)}>
-              <Trash2 size={12} />
-              Clear all
-            </button>
           </div>
         )}
       </motion.div>
-
-      {/* ── Mode banner ── */}
-      <AnimatePresence>
-        {selectMode && (
-          <motion.div
-            className={`pt-mode-banner pt-mode-banner--${selectMode}`}
-            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-            animate={{ opacity: 1, height: 'auto', marginBottom: '1rem' }}
-            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {selectMode === 'delete' ? (
-              <>
-                <CheckSquare size={14} />
-                Tap items to select them — then delete all at once
-              </>
-            ) : (
-              <>
-                <GitMerge size={14} />
-                Select exactly 2 items to merge into one
-              </>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── Empty state ── */}
       {!isLoading && items.length === 0 && (
@@ -405,37 +352,86 @@ export default function PantryPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: idx * 0.055 }}
               >
-                {/* Shelf label */}
+                {/* Shelf label + mini-menu */}
                 <div className="pt-shelf-header">
                   <span className="pt-shelf-emoji" aria-hidden>{meta.emoji}</span>
                   <span className="pt-shelf-name">{cat}</span>
                   <span className="pt-shelf-count">{shelfItems.length}</span>
+                  {shelfSelectMode === cat && (
+                    <button className="pt-shelf-cancel-btn" onClick={exitShelfSelectMode}>
+                      <X size={12} /> Cancel
+                    </button>
+                  )}
+                  <div className="pt-shelf-overflow-wrap">
+                    <button
+                      className="pt-shelf-menu-btn"
+                      onClick={() => setOpenShelfMenu(openShelfMenu === cat ? null : cat)}
+                      title="Shelf options"
+                      aria-label="Shelf options"
+                    >
+                      <MoreHorizontal size={14} />
+                    </button>
+                    <AnimatePresence>
+                      {openShelfMenu === cat && (
+                        <motion.div
+                          className="pt-shelf-menu"
+                          initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                          transition={{ duration: 0.13 }}
+                        >
+                          <button
+                            className="pt-overflow-item"
+                            onClick={() => { setShowAddModal(true); setOpenShelfMenu(null) }}
+                          >
+                            <Plus size={13} />
+                            Add item
+                          </button>
+                          <button
+                            className="pt-overflow-item"
+                            onClick={() => {
+                              setShelfSelectMode(cat)
+                              setShelfSelectedIds(new Set())
+                              setOpenShelfMenu(null)
+                            }}
+                          >
+                            <CheckSquare size={13} />
+                            Select &amp; delete
+                          </button>
+                          <div className="pt-overflow-divider" />
+                          <button
+                            className="pt-overflow-item pt-overflow-item--danger"
+                            onClick={() => { setClearShelfConfirm(cat); setOpenShelfMenu(null) }}
+                          >
+                            <Trash2 size={13} />
+                            Clear shelf
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
 
                 {/* Items */}
                 <div className="pt-shelf-chips">
                   <AnimatePresence mode="popLayout">
                     {shelfItems.map((item) => {
-                      const isSelected = selectedIds.has(item.id)
-                      const isDisabled =
-                        selectMode === 'merge' && selectedIds.size >= 2 && !isSelected
+                      const inSelectMode = shelfSelectMode === cat
+                      const isSelected = inSelectMode && shelfSelectedIds.has(item.id)
                       return (
                         <motion.button
                           key={item.id}
-                          className={`pt-chip${isSelected ? ' pt-chip--selected' : ''}${isDisabled ? ' pt-chip--disabled' : ''}${selectMode ? ' pt-chip--selectable' : ''}`}
+                          className={`pt-chip${isSelected ? ' pt-chip--selected' : ''}${inSelectMode ? ' pt-chip--selectable' : ''}`}
                           layout
                           initial={{ opacity: 0, scale: 0.88 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.82, transition: { duration: 0.15 } }}
                           transition={{ duration: 0.2 }}
                           onClick={() => {
-                            if (selectMode) {
-                              if (!isDisabled) toggleSelect(item)
-                            } else {
-                              setEditItem(item)
-                            }
+                            if (inSelectMode) toggleShelfSelect(item)
+                            else setEditItem(item)
                           }}
-                          title={selectMode ? undefined : 'Click to edit'}
+                          title={inSelectMode ? undefined : 'Click to edit'}
                         >
                           {isSelected && (
                             <span className="pt-chip-check">
@@ -449,7 +445,7 @@ export default function PantryPage() {
                               {item.unit ? ` ${item.unit}` : ''}
                             </span>
                           )}
-                          {!selectMode && (
+                          {!inSelectMode && (
                             <span className="pt-chip-edit-icon" aria-hidden>
                               <Edit2 size={9} />
                             </span>
@@ -465,9 +461,9 @@ export default function PantryPage() {
         </div>
       )}
 
-      {/* ── Floating action bar ── */}
+      {/* ── Floating action bar (shelf select mode) ── */}
       <AnimatePresence>
-        {selectMode && selectedIds.size > 0 && (
+        {shelfSelectMode && shelfSelectedIds.size > 0 && (
           <motion.div
             className="pt-action-bar"
             initial={{ opacity: 0, y: 32, scale: 0.96 }}
@@ -476,33 +472,20 @@ export default function PantryPage() {
             transition={{ duration: 0.22, ease: [0.34, 1.56, 0.64, 1] }}
           >
             <span className="pt-action-bar-count">
-              {selectedIds.size} selected
+              {shelfSelectedIds.size} selected
             </span>
-            {selectMode === 'delete' && (
-              <button
-                className="pt-btn pt-btn--danger"
-                disabled={bulkDeleteMutation.isPending}
-                onClick={() => bulkDeleteMutation.mutate(Array.from(selectedIds))}
-              >
-                {bulkDeleteMutation.isPending
-                  ? <RefreshCw size={14} className="pt-spin" />
-                  : <Trash2 size={14} />
-                }
-                Delete {selectedIds.size} item{selectedIds.size > 1 ? 's' : ''}
-              </button>
-            )}
-            {selectMode === 'merge' && selectedIds.size === 2 && (
-              <button
-                className="pt-btn pt-btn--primary"
-                onClick={() =>
-                  setMergeConfirm({ a: selectedItems[0], b: selectedItems[1] })
-                }
-              >
-                <GitMerge size={14} />
-                Merge items
-              </button>
-            )}
-            <button className="pt-action-bar-cancel" onClick={exitSelectMode}>
+            <button
+              className="pt-btn pt-btn--danger"
+              disabled={bulkDeleteMutation.isPending}
+              onClick={() => bulkDeleteMutation.mutate(Array.from(shelfSelectedIds))}
+            >
+              {bulkDeleteMutation.isPending
+                ? <RefreshCw size={14} className="pt-spin" />
+                : <Trash2 size={14} />
+              }
+              Delete {shelfSelectedIds.size} item{shelfSelectedIds.size > 1 ? 's' : ''}
+            </button>
+            <button className="pt-action-bar-cancel" onClick={exitShelfSelectMode}>
               <X size={15} />
             </button>
           </motion.div>
@@ -540,26 +523,17 @@ export default function PantryPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Merge confirm modal ── */}
+      {/* ── Clear shelf confirm modal ── */}
       <AnimatePresence>
-        {mergeConfirm && (
-          <MergeConfirmModal
-            a={mergeConfirm.a}
-            b={mergeConfirm.b}
-            isLoading={mergeMutation.isPending}
-            onClose={() => setMergeConfirm(null)}
-            onConfirm={(keepId, mergeId) => mergeMutation.mutate({ keepId, mergeId })}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Clear confirm modal ── */}
-      <AnimatePresence>
-        {showClearConfirm && (
+        {clearShelfConfirm && (
           <ClearConfirmModal
-            isLoading={clearMutation.isPending}
-            onClose={() => setShowClearConfirm(false)}
-            onConfirm={() => clearMutation.mutate()}
+            shelfName={clearShelfConfirm}
+            isLoading={clearShelfMutation.isPending}
+            onClose={() => setClearShelfConfirm(null)}
+            onConfirm={() => {
+              const ids = (grouped.get(clearShelfConfirm) ?? []).map((i) => i.id)
+              clearShelfMutation.mutate(ids)
+            }}
           />
         )}
       </AnimatePresence>
@@ -579,13 +553,15 @@ export default function PantryPage() {
   )
 }
 
-// ── Clear confirm modal ──────────────────
+// ── Clear shelf confirm modal ────────────
 
 function ClearConfirmModal({
+  shelfName,
   isLoading,
   onClose,
   onConfirm,
 }: {
+  shelfName: string
   isLoading: boolean
   onClose: () => void
   onConfirm: () => void
@@ -601,11 +577,11 @@ function ClearConfirmModal({
         transition={{ duration: 0.2 }}
       >
         <div className="pt-modal-header">
-          <h2>Clear pantry?</h2>
+          <h2>Clear {shelfName}?</h2>
           <button className="pt-modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="pt-clear-modal-body">
-          <p>This will remove all items from your pantry. This cannot be undone.</p>
+          <p>All items in the <strong>{shelfName}</strong> shelf will be removed. This cannot be undone.</p>
         </div>
         <div className="pt-modal-actions">
           <button className="pt-btn pt-btn--ghost" onClick={onClose}>Cancel</button>
@@ -615,88 +591,7 @@ function ClearConfirmModal({
             onClick={onConfirm}
           >
             {isLoading ? <RefreshCw size={14} className="pt-spin" /> : <Trash2 size={14} />}
-            Yes, clear all
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
-// ── Merge confirm modal ──────────────────
-
-function MergeConfirmModal({
-  a, b, isLoading, onClose, onConfirm,
-}: {
-  a: PantryItem
-  b: PantryItem
-  isLoading: boolean
-  onClose: () => void
-  onConfirm: (keepId: string, mergeId: string) => void
-}) {
-  const [keepId, setKeepId] = useState(a.id)
-  const mergeId = keepId === a.id ? b.id : a.id
-  const keepItem = keepId === a.id ? a : b
-  const mergeItem = keepId === a.id ? b : a
-  const totalQty =
-    a.quantity !== null && b.quantity !== null
-      ? a.quantity + b.quantity
-      : a.quantity ?? b.quantity
-
-  return (
-    <div className="pt-overlay" onClick={onClose}>
-      <motion.div
-        className="pt-modal"
-        onClick={(e) => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 16 }}
-        transition={{ duration: 0.2 }}
-      >
-        <div className="pt-modal-header">
-          <h2>Merge items</h2>
-          <button className="pt-modal-close" onClick={onClose}><X size={18} /></button>
-        </div>
-        <div className="pt-merge-modal-body">
-          <p className="pt-merge-hint">Choose which name to keep. Quantities will be combined.</p>
-          <div className="pt-merge-options">
-            {[a, b].map((item) => (
-              <button
-                key={item.id}
-                className={`pt-merge-option${keepId === item.id ? ' selected' : ''}`}
-                onClick={() => setKeepId(item.id)}
-              >
-                <div className={`pt-merge-radio${keepId === item.id ? ' checked' : ''}`}>
-                  {keepId === item.id && <Check size={10} />}
-                </div>
-                <div>
-                  <div className="pt-merge-option-name">{item.ingredientName}</div>
-                  {item.quantity != null && (
-                    <div className="pt-merge-option-qty">
-                      {item.quantity}{item.unit ? ` ${item.unit}` : ''}
-                    </div>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="pt-merge-preview">
-            Result: <strong>{keepItem.ingredientName}</strong>
-            {totalQty !== null && (
-              <> — {totalQty}{keepItem.unit ? ` ${keepItem.unit}` : ''}</>
-            )}
-            <span className="pt-merge-preview-drop"> (removes "{mergeItem.ingredientName}")</span>
-          </div>
-        </div>
-        <div className="pt-modal-actions">
-          <button className="pt-btn pt-btn--ghost" onClick={onClose}>Cancel</button>
-          <button
-            className="pt-btn pt-btn--primary"
-            disabled={isLoading}
-            onClick={() => onConfirm(keepId, mergeId)}
-          >
-            {isLoading ? <RefreshCw size={14} className="pt-spin" /> : <GitMerge size={14} />}
-            Confirm merge
+            Clear shelf
           </button>
         </div>
       </motion.div>
