@@ -205,11 +205,23 @@ function BrandPanel() {
         transition={{ delay: 0.25, duration: 0.65 }}
       >
         <h2>
-          Cook something
+          Eat well.
           <br />
-          <em>amazing</em> today.
+          <em>Every single day.</em>
         </h2>
-        <p>AI-powered recipes, meal planning & nutrition — crafted for you.</p>
+        <p>Personalised recipes, smart meal plans, grocery lists and nutrition tracking — all powered by AI.</p>
+      </motion.div>
+
+      {/* Feature pills */}
+      <motion.div
+        className="brand-pills"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45, duration: 0.55 }}
+      >
+        {['🍳 AI Recipes', '📅 Meal Planner', '🛒 Grocery Lists', '📊 Nutrition Tracking'].map(pill => (
+          <span key={pill} className="brand-pill">{pill}</span>
+        ))}
       </motion.div>
 
       {/* Ambient blobs */}

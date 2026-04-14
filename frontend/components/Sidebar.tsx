@@ -25,36 +25,36 @@ const NAV_ITEMS = [
 
 const COLLAPSED_KEY = 'sidebar-collapsed'
 
-function getSidebarGreeting() {
-  const h = new Date().getHours()
-  if (h < 5)  return 'Good night'
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  return 'Good evening'
-}
-
-function getSidebarDate() {
-  return new Date().toLocaleDateString('en-GB', {
-    weekday: 'short', day: 'numeric', month: 'short',
-  })
-}
-
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
 
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem(COLLAPSED_KEY) === 'true'
-  })
+  const [collapsed, setCollapsed] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [greeting, setGreeting] = useState('')
+  const [dateStr, setDateStr] = useState('')
   const logoutRef = useRef<HTMLDivElement>(null)
 
-  // Persist collapsed state
+  // Hydration-safe: only read localStorage + Date on the client
   useEffect(() => {
-    localStorage.setItem(COLLAPSED_KEY, String(collapsed))
-  }, [collapsed])
+    setCollapsed(localStorage.getItem(COLLAPSED_KEY) === 'true')
+
+    const h = new Date().getHours()
+    if (h < 5)       setGreeting('Good night')
+    else if (h < 12) setGreeting('Good morning')
+    else if (h < 17) setGreeting('Good afternoon')
+    else             setGreeting('Good evening')
+
+    setDateStr(new Date().toLocaleDateString('en-GB', {
+      weekday: 'short', day: 'numeric', month: 'short',
+    }))
+  }, [])
+
+  // Persist collapsed state (skip first render where collapsed is still false default)
+  useEffect(() => {
+    if (dateStr) localStorage.setItem(COLLAPSED_KEY, String(collapsed))
+  }, [collapsed, dateStr])
 
   // Close logout popover on outside click
   useEffect(() => {
@@ -119,8 +119,8 @@ export default function Sidebar() {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.18 }}
           >
-            <div className="sidebar-greeting-time">{getSidebarGreeting()}</div>
-            <div className="sidebar-greeting-date">{getSidebarDate()}</div>
+            <div className="sidebar-greeting-time">{greeting}</div>
+            <div className="sidebar-greeting-date">{dateStr}</div>
           </motion.div>
         )}
       </AnimatePresence>
