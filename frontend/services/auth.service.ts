@@ -41,14 +41,14 @@ export interface AuthUser {
 }
 
 export const authApi = {
-  signup: async (payload: SignupPayload): Promise<AuthUser> => {
+  signup: async (payload: SignupPayload): Promise<{ user: AuthUser; token: string }> => {
     const res = await api.post('/api/auth/signup', payload)
-    return res.data.data.user
+    return { user: res.data.data.user, token: res.data.data.token }
   },
 
-  login: async (payload: LoginPayload): Promise<AuthUser> => {
+  login: async (payload: LoginPayload): Promise<{ user: AuthUser; token: string }> => {
     const res = await api.post('/api/auth/login', payload)
-    return res.data.data.user
+    return { user: res.data.data.user, token: res.data.data.token }
   },
 
   logout: async (): Promise<void> => {

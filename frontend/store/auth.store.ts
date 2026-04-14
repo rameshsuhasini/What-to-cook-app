@@ -12,8 +12,9 @@ import { AuthUser } from '@/services/auth.service'
 
 interface AuthState {
   user: AuthUser | null
+  token: string | null
   isAuthenticated: boolean
-  setUser: (user: AuthUser | null) => void
+  setUser: (user: AuthUser | null, token?: string) => void
   logout: () => void
 }
 
@@ -21,19 +22,20 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
+      token: null,
       isAuthenticated: false,
 
-      setUser: (user) =>
-        set({ user, isAuthenticated: !!user }),
+      setUser: (user, token) =>
+        set({ user, token: token ?? null, isAuthenticated: !!user }),
 
       logout: () =>
-        set({ user: null, isAuthenticated: false }),
+        set({ user: null, token: null, isAuthenticated: false }),
     }),
     {
       name: 'auth-store',
-      // Only persist non-sensitive fields
       partialize: (state) => ({
         user: state.user,
+        token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
     }

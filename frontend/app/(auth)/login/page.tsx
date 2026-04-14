@@ -37,7 +37,7 @@ export default function LoginPage() {
         data,
         { withCredentials: true },
       );
-      setUser(res.data.data.user);
+      setUser(res.data.data.user, res.data.data.token);
       // Check if profile is complete — redirect to onboarding if not
       try {
         const profileRes = await axios.get(

@@ -48,7 +48,7 @@ export default function SignupPage() {
         data,
         { withCredentials: true }
       )
-      setUser(res.data.data.user)
+      setUser(res.data.data.user, res.data.data.token)
       // New users always go to onboarding first
       router.push('/onboarding')
     } catch (err: any) {

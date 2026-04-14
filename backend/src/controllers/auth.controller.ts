@@ -32,12 +32,12 @@ export class AuthController {
       const { name, email, password } = req.body
       const result = await authService.signup({ name, email, password })
 
-      // Set JWT in httpOnly cookie
+      // Set JWT in httpOnly cookie (dev) + return in body (cross-origin prod)
       res.cookie('token', result.token, COOKIE_OPTIONS)
 
       res.status(201).json({
         success: true,
-        data: { user: result.user },
+        data: { user: result.user, token: result.token },
       })
     } catch (error) {
       next(error)
@@ -52,12 +52,12 @@ export class AuthController {
       const { email, password } = req.body
       const result = await authService.login({ email, password })
 
-      // Set JWT in httpOnly cookie
+      // Set JWT in httpOnly cookie (dev) + return in body (cross-origin prod)
       res.cookie('token', result.token, COOKIE_OPTIONS)
 
       res.status(200).json({
         success: true,
-        data: { user: result.user },
+        data: { user: result.user, token: result.token },
       })
     } catch (error) {
       next(error)

@@ -6,4 +6,24 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Attach Bearer token from Zustand store on every request
+// This handles cross-origin (Vercel → Render) where cookies are blocked
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('auth-store')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        const token = parsed?.state?.token
+        if (token) {
+          config.headers['Authorization'] = `Bearer ${token}`
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return config
+})
+
 export default api
