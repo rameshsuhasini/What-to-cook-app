@@ -40,7 +40,7 @@ export interface GeneratedRecipe {
 
 export const aiApi = {
   generateHealthInsights: async (): Promise<HealthInsights> => {
-    const res = await api.post('/api/ai/health-insights')
+    const res = await api.post('/ai/health-insights')
     return res.data.data.insights
   },
 
@@ -50,7 +50,7 @@ export const aiApi = {
     allergies?: string
     servings?: number
   }): Promise<GeneratedRecipe> => {
-    const res = await api.post('/api/ai/generate-recipe', payload)
+    const res = await api.post('/ai/generate-recipe', payload)
     return res.data.data.recipe
   },
 
@@ -58,12 +58,12 @@ export const aiApi = {
     weekStart: string
     preferences?: string
   }): Promise<{ days: Record<string, unknown> }> => {
-    const res = await api.post('/api/ai/generate-meal-plan', payload)
+    const res = await api.post('/ai/generate-meal-plan', payload)
     return res.data.data
   },
 
   getPantrySuggestions: async (): Promise<AIPantrySuggestions> => {
-    const res = await api.post('/api/ai/pantry-suggestions')
+    const res = await api.post('/ai/pantry-suggestions')
     return res.data.data.suggestions
   },
 }

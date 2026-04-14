@@ -43,7 +43,7 @@ export default function LoginPage() {
       try {
         const profileRes = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/api/profile`,
-          { headers: { Authorization: `Bearer ${token}` } },
+          { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } },
         )
         const profile = profileRes.data.data.profile
         const isIncomplete = profile.dietType === 'NONE' && profile.calorieGoal === null

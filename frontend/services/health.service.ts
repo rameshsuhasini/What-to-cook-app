@@ -38,17 +38,17 @@ export interface NutritionLogsResponse {
 
 export const healthApi = {
   getWeightLogs: async (params?: { limit?: number }): Promise<WeightLogsResponse> => {
-    const res = await api.get('/api/weight-logs', { params })
+    const res = await api.get('/weight-logs', { params })
     return res.data.data
   },
 
   addWeightLog: async (payload: { weightKg: number; logDate: string; notes?: string }): Promise<WeightLog> => {
-    const res = await api.post('/api/weight-logs', payload)
+    const res = await api.post('/weight-logs', payload)
     return res.data.data.log
   },
 
   getNutritionLogs: async (params?: { limit?: number }): Promise<NutritionLogsResponse> => {
-    const res = await api.get('/api/nutrition-logs', { params })
+    const res = await api.get('/nutrition-logs', { params })
     return res.data.data
   },
 
@@ -59,7 +59,7 @@ export const healthApi = {
     fat: number
     date: string
   }): Promise<NutritionLog> => {
-    const res = await api.post('/api/nutrition-logs', payload)
+    const res = await api.post('/nutrition-logs', payload)
     return res.data.data.log
   },
 }

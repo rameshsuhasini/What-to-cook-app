@@ -42,19 +42,19 @@ export interface UpdateProfilePayload {
 
 export const profileApi = {
   getProfile: async (): Promise<UserProfile> => {
-    const res = await api.get('/api/profile')
+    const res = await api.get('/profile')
     return res.data.data.profile
   },
 
   updateProfile: async (payload: UpdateProfilePayload): Promise<UserProfile> => {
-    const res = await api.put('/api/profile', payload)
+    const res = await api.put('/profile', payload)
     return res.data.data.profile
   },
 
   uploadAvatar: async (file: File): Promise<UserProfile> => {
     const form = new FormData()
     form.append('avatar', file)
-    const res = await formApi.post('/api/profile/avatar', form)
+    const res = await formApi.post('/profile/avatar', form)
     return res.data.data.profile
   },
 }
