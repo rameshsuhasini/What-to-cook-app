@@ -559,7 +559,7 @@ export default function ProgressPage() {
                           const fatDiff  = prev ? log.fat      - prev.fat      : null
                           return (
                             <tr key={log.id}>
-                              <td>
+                              <td className="pg-td--date">
                                 {new Date(log.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                               </td>
                               <td>
