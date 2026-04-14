@@ -37,12 +37,13 @@ export default function LoginPage() {
         data,
         { withCredentials: true },
       );
-      setUser(res.data.data.user, res.data.data.token);
+      const token = res.data.data.token
+      setUser(res.data.data.user, token);
       // Check if profile is complete — redirect to onboarding if not
       try {
         const profileRes = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/api/profile`,
-          { withCredentials: true },
+          { headers: { Authorization: `Bearer ${token}` } },
         )
         const profile = profileRes.data.data.profile
         const isIncomplete = profile.dietType === 'NONE' && profile.calorieGoal === null

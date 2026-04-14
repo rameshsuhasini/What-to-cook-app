@@ -1,15 +1,6 @@
-import axios from 'axios'
+import api from '@/lib/axios'
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
-  headers: { 'Content-Type': 'application/json' },
-})
-
-const formApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
-})
+const formApi = api
 
 export type DietType = 'NONE' | 'VEGETARIAN' | 'VEGAN' | 'KETO' | 'PALEO'
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY'
