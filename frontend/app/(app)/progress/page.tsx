@@ -294,7 +294,7 @@ export default function ProgressPage() {
               className="pg-goal-fill"
               initial={{ width: 0 }}
               animate={{ width: `${goalProgress}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+              transition={{ duration: 0.8, ease: 'easeOut' as const, delay: 0.2 }}
             />
           </div>
           <div className="pg-goal-labels">
@@ -693,7 +693,7 @@ function MacroBar({
           style={{ background: color }}
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
+          transition={{ duration: 0.7, ease: 'easeOut' as const }}
         />
       </div>
       <span className="pg-macro-pct" style={{ color }}>{pct}%</span>

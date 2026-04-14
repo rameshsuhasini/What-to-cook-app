@@ -382,7 +382,7 @@ export default function GroceriesPage() {
                     ? `${(summary.checkedItems / summary.totalItems) * 100}%`
                     : '0%'
                 }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
+                transition={{ duration: 0.6, ease: 'easeOut' as const }}
               />
             </div>
             <span className="gr-progress-pct">

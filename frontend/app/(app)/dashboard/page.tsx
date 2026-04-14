@@ -26,7 +26,7 @@ const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i = 0) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.08, duration: 0.5, ease: 'easeOut' },
+    transition: { delay: i * 0.08, duration: 0.5, ease: 'easeOut' as const },
   }),
 }
 
@@ -373,7 +373,7 @@ function AnimatedNumber({ value }: { value: number }) {
   const [display, setDisplay] = useState(0)
 
   useEffect(() => {
-    const controls = animate(mv, value, { duration: 0.9, ease: 'easeOut' })
+    const controls = animate(mv, value, { duration: 0.9, ease: 'easeOut' as const })
     const unsub = rounded.on('change', setDisplay)
     return () => { controls.stop(); unsub() }
   }, [value, mv, rounded])
@@ -409,7 +409,7 @@ function NutritionRing({
             transform="rotate(-90 36 36)"
             initial={{ strokeDasharray: `0 ${circ}` }}
             animate={{ strokeDasharray: `${dash} ${circ}` }}
-            transition={{ duration: 0.9, ease: 'easeOut' }}
+            transition={{ duration: 0.9, ease: 'easeOut' as const }}
           />
         </svg>
         <div className="ring-center">{icon}</div>

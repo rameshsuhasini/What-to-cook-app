@@ -67,7 +67,7 @@ export default function SignupPage() {
         className="auth-brand"
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.7, ease: 'easeOut' }}
+        transition={{ duration: 0.7, ease: 'easeOut' as const }}
       >
         <BrandPanel />
       </motion.div>
@@ -77,7 +77,7 @@ export default function SignupPage() {
         className="auth-form-panel"
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
+        transition={{ duration: 0.7, ease: 'easeOut' as const, delay: 0.1 }}
       >
         <div className="auth-form-container">
           {/* Mobile logo */}

@@ -152,7 +152,7 @@ export default function PantrySuggestionsModal({ onClose }: { onClose: () => voi
                     style={{ background: scoreColor }}
                     initial={{ width: 0 }}
                     animate={{ width: `${score}%` }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    transition={{ duration: 0.8, ease: 'easeOut' as const }}
                   />
                 </div>
                 {data.missingEssentials.length > 0 && (

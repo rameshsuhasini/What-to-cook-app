@@ -138,7 +138,7 @@ export default function OnboardingPage() {
           <motion.div
             className="ob-progress-fill"
             animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+            transition={{ duration: 0.4, ease: 'easeOut' as const }}
           />
         </div>
 

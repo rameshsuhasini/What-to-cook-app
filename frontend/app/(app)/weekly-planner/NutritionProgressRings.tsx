@@ -56,7 +56,7 @@ function MacroBar({ emoji, label, value, unit, goal, color, bgColor }: MacroBarP
           style={{ background: color }}
           initial={{ width: '0%' }}
           animate={{ width: `${barPct}%` }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
+          transition={{ duration: 0.7, ease: 'easeOut' as const }}
         />
       </div>
 
