@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChefHat, Target, Leaf, ArrowRight, ArrowLeft,
-  Loader2, Check, Sparkles,
+  Loader2, Check, Sparkles, User,
 } from 'lucide-react'
-import { profileApi, DietType } from '@/services/profile.service'
+import { profileApi, DietType, Gender } from '@/services/profile.service'
 import { useQueryClient } from '@tanstack/react-query'
 import Image from 'next/image'
 import './onboarding.css'
@@ -15,11 +15,20 @@ import './onboarding.css'
 // ── Types ─────────────────────────────────
 
 interface OnboardingData {
+  // Step 1 — Diet
   dietType: DietType
+  // Step 2 — Body stats
+  age: number | ''
+  gender: Gender | ''
+  heightCm: number | ''
+  weightKg: number | ''
+  targetWeightKg: number | ''
+  // Step 3 — Goals
   calorieGoal: number | ''
   proteinGoal: number | ''
   carbGoal: number | ''
   fatGoal: number | ''
+  // Step 4 — Preferences
   allergies: string
   healthConditions: string
   foodPreferences: string
@@ -35,10 +44,18 @@ const DIET_OPTIONS: { value: DietType; label: string; emoji: string; desc: strin
   { value: 'PALEO',      label: 'Paleo',          emoji: '🫙', desc: 'Whole foods only' },
 ]
 
+const GENDER_OPTIONS: { value: Gender; label: string; emoji: string }[] = [
+  { value: 'MALE',              label: 'Male',            emoji: '♂️' },
+  { value: 'FEMALE',            label: 'Female',          emoji: '♀️' },
+  { value: 'OTHER',             label: 'Other',           emoji: '⚧' },
+  { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say', emoji: '🤐' },
+]
+
 // ── Step meta ─────────────────────────────
 
 const STEPS = [
   { label: 'Diet type',   icon: <Leaf size={16} /> },
+  { label: 'Body stats',  icon: <User size={16} /> },
   { label: 'Your goals',  icon: <Target size={16} /> },
   { label: 'Preferences', icon: <Sparkles size={16} /> },
 ]
@@ -64,6 +81,11 @@ export default function OnboardingPage() {
 
   const [data, setData] = useState<OnboardingData>({
     dietType:        'NONE',
+    age:             '',
+    gender:          '',
+    heightCm:        '',
+    weightKg:        '',
+    targetWeightKg:  '',
     calorieGoal:     2000,
     proteinGoal:     150,
     carbGoal:        200,
@@ -85,15 +107,19 @@ export default function OnboardingPage() {
     try {
       await profileApi.updateProfile({
         dietType:         data.dietType,
-        calorieGoal:      data.calorieGoal === '' ? null : Number(data.calorieGoal),
-        proteinGoal:      data.proteinGoal === '' ? null : Number(data.proteinGoal),
-        carbGoal:         data.carbGoal    === '' ? null : Number(data.carbGoal),
-        fatGoal:          data.fatGoal     === '' ? null : Number(data.fatGoal),
+        age:              data.age              === '' ? null : Number(data.age),
+        gender:           data.gender           === '' ? null : data.gender,
+        heightCm:         data.heightCm         === '' ? null : Number(data.heightCm),
+        weightKg:         data.weightKg         === '' ? null : Number(data.weightKg),
+        targetWeightKg:   data.targetWeightKg   === '' ? null : Number(data.targetWeightKg),
+        calorieGoal:      data.calorieGoal      === '' ? null : Number(data.calorieGoal),
+        proteinGoal:      data.proteinGoal      === '' ? null : Number(data.proteinGoal),
+        carbGoal:         data.carbGoal         === '' ? null : Number(data.carbGoal),
+        fatGoal:          data.fatGoal          === '' ? null : Number(data.fatGoal),
         allergies:        data.allergies.trim()        || null,
         healthConditions: data.healthConditions.trim() || null,
         foodPreferences:  data.foodPreferences.trim()  || null,
       })
-      // Invalidate profile cache so dashboard shows fresh data
       await queryClient.invalidateQueries({ queryKey: ['profile'] })
       router.push('/dashboard')
     } catch {
@@ -113,7 +139,7 @@ export default function OnboardingPage() {
           </div>
           <div className="ob-brand-copy">
             <h2>Let's personalise<br /><em>your kitchen</em></h2>
-            <p>A quick 3-step setup so your meal plans, recipes, and insights are built just for you.</p>
+            <p>A quick 4-step setup so your meal plans, recipes, and insights are built just for you.</p>
           </div>
           {/* Step list */}
           <div className="ob-step-list">
@@ -159,8 +185,9 @@ export default function OnboardingPage() {
               className="ob-step-content"
             >
               {step === 0 && <StepDiet data={data} set={set} />}
-              {step === 1 && <StepGoals data={data} set={set} />}
-              {step === 2 && <StepPreferences data={data} set={set} />}
+              {step === 1 && <StepBodyStats data={data} set={set} />}
+              {step === 2 && <StepGoals data={data} set={set} />}
+              {step === 3 && <StepPreferences data={data} set={set} />}
             </motion.div>
           </AnimatePresence>
 
@@ -191,9 +218,13 @@ export default function OnboardingPage() {
             )}
           </div>
 
-          {/* Skip entirely — step 2 only */}
-          {step === 2 && (
-            <button className="ob-skip" onClick={handleFinish} disabled={saving}>
+          {/* Skip — steps 1, 2, 3 */}
+          {step >= 1 && (
+            <button
+              className="ob-skip"
+              onClick={step === STEPS.length - 1 ? handleFinish : goNext}
+              disabled={saving}
+            >
               Skip for now
             </button>
           )}
@@ -243,7 +274,77 @@ function StepDiet({
   )
 }
 
-// ── Step 2: Goals ─────────────────────────
+// ── Step 2: Body stats ────────────────────
+
+function StepBodyStats({
+  data,
+  set,
+}: {
+  data: OnboardingData
+  set: <K extends keyof OnboardingData>(key: K, val: OnboardingData[K]) => void
+}) {
+  return (
+    <div className="ob-step">
+      <h2 className="ob-step-title">Tell us about yourself</h2>
+      <p className="ob-step-sub">Used for BMI, calorie estimates, and weight tracking. All optional — you can update anytime.</p>
+
+      {/* Gender */}
+      <div className="ob-body-section">
+        <label className="ob-body-label">Gender</label>
+        <div className="ob-gender-grid">
+          {GENDER_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              className={`ob-gender-btn ${data.gender === opt.value ? 'ob-gender-btn--active' : ''}`}
+              onClick={() => set('gender', opt.value)}
+            >
+              <span>{opt.emoji}</span>
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Numeric fields */}
+      <div className="ob-body-grid">
+        <BodyField label="Age" unit="yrs" value={data.age} onChange={v => set('age', v)} placeholder="28" min={10} max={120} />
+        <BodyField label="Height" unit="cm" value={data.heightCm} onChange={v => set('heightCm', v)} placeholder="170" min={100} max={250} />
+        <BodyField label="Current weight" unit="kg" value={data.weightKg} onChange={v => set('weightKg', v)} placeholder="70" min={20} max={300} />
+        <BodyField label="Target weight" unit="kg" value={data.targetWeightKg} onChange={v => set('targetWeightKg', v)} placeholder="65" min={20} max={300} />
+      </div>
+
+      <p className="ob-goals-hint">💡 This information stays private and is only used to personalise your experience.</p>
+    </div>
+  )
+}
+
+function BodyField({
+  label, unit, value, onChange, placeholder, min, max,
+}: {
+  label: string; unit: string; value: number | ''
+  onChange: (v: number | '') => void; placeholder: string
+  min?: number; max?: number
+}) {
+  return (
+    <div className="ob-body-field">
+      <label className="ob-body-field-label">{label}</label>
+      <div className="ob-goal-input-wrap">
+        <input
+          type="number"
+          className="ob-goal-input"
+          placeholder={placeholder}
+          value={value}
+          min={min}
+          max={max}
+          onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+        />
+        <span className="ob-goal-unit">{unit}</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Step 3: Goals ─────────────────────────
 
 function StepGoals({
   data,
@@ -257,38 +358,10 @@ function StepGoals({
       <h2 className="ob-step-title">Set your daily goals</h2>
       <p className="ob-step-sub">We'll use these to track your nutrition and build balanced meal plans.</p>
       <div className="ob-goals-grid">
-        <GoalField
-          label="Calories"
-          unit="kcal"
-          color="coral"
-          value={data.calorieGoal}
-          onChange={v => set('calorieGoal', v)}
-          placeholder="2000"
-        />
-        <GoalField
-          label="Protein"
-          unit="g"
-          color="teal"
-          value={data.proteinGoal}
-          onChange={v => set('proteinGoal', v)}
-          placeholder="150"
-        />
-        <GoalField
-          label="Carbs"
-          unit="g"
-          color="amber"
-          value={data.carbGoal}
-          onChange={v => set('carbGoal', v)}
-          placeholder="200"
-        />
-        <GoalField
-          label="Fat"
-          unit="g"
-          color="blue"
-          value={data.fatGoal}
-          onChange={v => set('fatGoal', v)}
-          placeholder="65"
-        />
+        <GoalField label="Calories" unit="kcal" color="coral" value={data.calorieGoal} onChange={v => set('calorieGoal', v)} placeholder="2000" />
+        <GoalField label="Protein"  unit="g"    color="teal"  value={data.proteinGoal} onChange={v => set('proteinGoal', v)} placeholder="150"  />
+        <GoalField label="Carbs"    unit="g"    color="amber" value={data.carbGoal}    onChange={v => set('carbGoal', v)}    placeholder="200"  />
+        <GoalField label="Fat"      unit="g"    color="blue"  value={data.fatGoal}     onChange={v => set('fatGoal', v)}     placeholder="65"   />
       </div>
       <p className="ob-goals-hint">💡 Not sure? Our defaults are based on a standard healthy adult. You can update these anytime in Profile.</p>
     </div>
@@ -319,7 +392,7 @@ function GoalField({
   )
 }
 
-// ── Step 3: Preferences ───────────────────
+// ── Step 4: Preferences ───────────────────
 
 function StepPreferences({
   data,
