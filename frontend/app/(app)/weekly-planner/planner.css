@@ -639,6 +639,324 @@
 .modal-confirm-btn:hover { opacity: 0.9; }
 .modal-confirm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/* Ghost variant — secondary action */
+.modal-confirm-btn--ghost {
+  background: var(--sand-100);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+.modal-confirm-btn--ghost:hover { background: var(--sand-200); opacity: 1; }
+
+/* ── Wide modal — recipe preview ────── */
+.add-modal--wide {
+  max-width: 620px;
+}
+
+/* ── Custom meal — AI generate button ─ */
+.generate-recipe-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: opacity var(--transition), transform var(--transition);
+}
+.generate-recipe-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.generate-recipe-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── Custom meal — generating spinner ─ */
+.custom-generating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+.custom-generating-spin {
+  color: #7c3aed;
+  animation: modal-spin 0.7s linear infinite;
+}
+
+@keyframes modal-spin { to { transform: rotate(360deg); } }
+
+.custom-generating p {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.custom-generating span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ── Generation error ────────────────── */
+.custom-gen-error {
+  font-size: 0.82rem;
+  color: #dc2626;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+/* ── Recipe preview body ─────────────── */
+.recipe-preview-body {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.preview-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.preview-field label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.preview-field input,
+.preview-field textarea {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  background: var(--sand-50);
+  border: 1.5px solid var(--sand-200);
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 38px;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.preview-field textarea {
+  height: auto;
+  padding: 9px 12px;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.preview-field input:focus,
+.preview-field textarea:focus {
+  border-color: var(--teal-400);
+  box-shadow: 0 0 0 3px rgba(29,158,117,0.1);
+  background: white;
+}
+
+.preview-field-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+}
+
+/* ── Macro fields ────────────────────── */
+.preview-macros {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.preview-macro-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-macro-field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.preview-macro-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--sand-200);
+  border-radius: 8px;
+  background: white;
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.preview-macro-input-wrap:focus-within { border-color: var(--teal-400); }
+
+.preview-macro-input-wrap input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 6px 6px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  min-width: 0;
+  width: 100%;
+}
+
+.preview-macro-input-wrap span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0 6px;
+  color: var(--text-muted);
+  background: var(--sand-50);
+  border-left: 1px solid var(--sand-200);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.preview-macro-field--coral .preview-macro-input-wrap:focus-within { border-color: var(--coral-400, #d85a30); }
+.preview-macro-field--teal  .preview-macro-input-wrap:focus-within { border-color: var(--teal-400); }
+.preview-macro-field--amber .preview-macro-input-wrap:focus-within { border-color: var(--amber-400, #ba7517); }
+.preview-macro-field--blue  .preview-macro-input-wrap:focus-within { border-color: var(--blue-400, #378add); }
+
+/* ── Sections ────────────────────────── */
+.preview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+/* ── Ingredients ─────────────────────── */
+.preview-ingredients {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ingredient-row {
+  display: grid;
+  grid-template-columns: 1fr 72px 72px 28px;
+  gap: 5px;
+  align-items: center;
+}
+
+.ingredient-row input {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  background: var(--sand-50);
+  border: 1.5px solid var(--sand-200);
+  border-radius: 8px;
+  padding: 0 8px;
+  height: 32px;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--transition);
+}
+
+.ingredient-row input:focus { border-color: var(--teal-400); background: white; }
+
+.ingredient-row-del {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background var(--transition), color var(--transition);
+}
+
+.ingredient-row-del:hover { background: #fee2e2; color: #ef4444; }
+
+.add-ingredient-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1.5px dashed var(--sand-200);
+  border-radius: 8px;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+  width: fit-content;
+}
+
+.add-ingredient-btn:hover {
+  border-color: var(--teal-400);
+  color: var(--teal-600);
+  background: rgba(29,158,117,0.04);
+}
+
+/* ── Steps collapsible ───────────────── */
+.preview-steps-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--sand-200);
+  border-radius: 10px;
+  background: var(--sand-50);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.preview-steps-toggle:hover { border-color: var(--teal-400); color: var(--teal-600); }
+
+.preview-steps-list {
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview-step-item {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--sand-100);
+}
+
+.preview-step-item:last-child { border-bottom: none; }
+
 /* ── AI generate modal ───────────────── */
 .ai-modal {
   background: white;

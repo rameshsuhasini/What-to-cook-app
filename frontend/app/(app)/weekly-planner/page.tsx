@@ -8,6 +8,7 @@ import React from 'react'
 import {
   ChevronLeft, ChevronRight, Sparkles, Plus, X,
   Search, Flame, Loader2, Check, AlertTriangle, Calendar, Pencil,
+  ArrowLeft, Trash2, ChevronDown, ChevronUp, Clock, Users,
 } from 'lucide-react'
 import { mealPlanApi, MealPlanItem, MealType, WeekView } from '@/services/meal-plan.service'
 import { recipeApi, Recipe } from '@/services/recipe.service'
@@ -55,6 +56,54 @@ function formatRange(monday: Date): string {
 // ── Add-meal modal ────────────────────────────────────────
 
 type AddModalMode = 'recipe' | 'custom'
+type CustomPhase = 'input' | 'generating' | 'preview'
+
+interface EditableIngredient {
+  ingredientName: string
+  quantity: number | ''
+  unit: string
+}
+
+interface EditableRecipe {
+  id: string
+  title: string
+  description: string
+  calories: number | ''
+  protein: number | ''
+  carbs: number | ''
+  fat: number | ''
+  prepTimeMinutes: number | ''
+  cookTimeMinutes: number | ''
+  servings: number | ''
+  cuisine: string
+  ingredients: EditableIngredient[]
+  steps: { stepNumber: number; instructionText: string }[]
+}
+
+function toEditable(r: Recipe): EditableRecipe {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description ?? '',
+    calories: r.calories ?? '',
+    protein: r.protein ?? '',
+    carbs: r.carbs ?? '',
+    fat: r.fat ?? '',
+    prepTimeMinutes: r.prepTimeMinutes ?? '',
+    cookTimeMinutes: r.cookTimeMinutes ?? '',
+    servings: r.servings ?? '',
+    cuisine: r.cuisine ?? '',
+    ingredients: r.ingredients.map((i) => ({
+      ingredientName: i.ingredientName,
+      quantity: i.quantity ?? '',
+      unit: i.unit ?? '',
+    })),
+    steps: r.steps.map((s) => ({
+      stepNumber: s.stepNumber,
+      instructionText: s.instructionText,
+    })),
+  }
+}
 
 function AddMealModal({
   dayDate,
@@ -74,6 +123,11 @@ function AddMealModal({
   const [customName, setCustomName] = useState('')
   const [customNotes, setCustomNotes] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [customPhase, setCustomPhase] = useState<CustomPhase>('input')
+  const [editableRecipe, setEditableRecipe] = useState<EditableRecipe | null>(null)
+  const [genError, setGenError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [stepsOpen, setStepsOpen] = useState(false)
 
   // Debounce search
   useEffect(() => {
@@ -90,118 +144,358 @@ function AddMealModal({
     weekday: 'long', day: 'numeric', month: 'long',
   })
 
-  const canConfirmCustom = customName.trim().length > 0
+  // ── Generate recipe from meal name ──────────────────────
+  const handleGenerate = async () => {
+    if (!customName.trim()) return
+    setGenError('')
+    setCustomPhase('generating')
+    try {
+      const recipe = await recipeApi.generateRecipe({ prompt: customName.trim() })
+      setEditableRecipe(toEditable(recipe))
+      setCustomPhase('preview')
+    } catch {
+      setGenError('Failed to generate recipe. Please try again.')
+      setCustomPhase('input')
+    }
+  }
+
+  // ── Ingredient helpers ───────────────────────────────────
+  const updateIngredient = (idx: number, field: keyof EditableIngredient, val: string | number | '') =>
+    setEditableRecipe((r) =>
+      r ? { ...r, ingredients: r.ingredients.map((ing, i) => (i === idx ? { ...ing, [field]: val } : ing)) } : r
+    )
+
+  const removeIngredient = (idx: number) =>
+    setEditableRecipe((r) => r ? { ...r, ingredients: r.ingredients.filter((_, i) => i !== idx) } : r)
+
+  const addIngredient = () =>
+    setEditableRecipe((r) =>
+      r ? { ...r, ingredients: [...r.ingredients, { ingredientName: '', quantity: '', unit: '' }] } : r
+    )
+
+  // ── Save edited recipe and add to planner ────────────────
+  const handleSaveAndAdd = async () => {
+    if (!editableRecipe) return
+    setSaving(true)
+    setGenError('')
+    try {
+      await recipeApi.updateRecipe(editableRecipe.id, {
+        title:           editableRecipe.title.trim(),
+        description:     editableRecipe.description.trim() || undefined,
+        calories:        editableRecipe.calories        === '' ? undefined : Number(editableRecipe.calories),
+        protein:         editableRecipe.protein         === '' ? undefined : Number(editableRecipe.protein),
+        carbs:           editableRecipe.carbs           === '' ? undefined : Number(editableRecipe.carbs),
+        fat:             editableRecipe.fat             === '' ? undefined : Number(editableRecipe.fat),
+        prepTimeMinutes: editableRecipe.prepTimeMinutes === '' ? undefined : Number(editableRecipe.prepTimeMinutes),
+        cookTimeMinutes: editableRecipe.cookTimeMinutes === '' ? undefined : Number(editableRecipe.cookTimeMinutes),
+        servings:        editableRecipe.servings        === '' ? undefined : Number(editableRecipe.servings),
+        cuisine:         editableRecipe.cuisine.trim()  || undefined,
+        ingredients: editableRecipe.ingredients
+          .filter((i) => i.ingredientName.trim())
+          .map((i) => ({
+            ingredientName: i.ingredientName.trim(),
+            quantity:       i.quantity === '' ? undefined : Number(i.quantity),
+            unit:           i.unit.trim() || undefined,
+          })),
+      })
+      onConfirm({ recipeId: editableRecipe.id })
+    } catch {
+      setGenError('Failed to save recipe. Please try again.')
+      setSaving(false)
+    }
+  }
+
+  const isPreview = customPhase === 'preview'
 
   return (
-    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      className="modal-backdrop"
+      onClick={(e) => e.target === e.currentTarget && !saving && onClose()}
+    >
       <motion.div
-        className="add-modal"
+        className={`add-modal${isPreview ? ' add-modal--wide' : ''}`}
+        layout
         initial={{ opacity: 0, scale: 0.96, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
         transition={{ duration: 0.2 }}
       >
+        {/* ── Header ── */}
         <div className="modal-header">
           <div>
-            <h3>Add {mealLabel}</h3>
-            <p>{dayDisplay}</p>
+            <h3>{isPreview ? 'Review & Edit Recipe' : `Add ${mealLabel}`}</h3>
+            <p>{isPreview ? (editableRecipe?.title ?? '') : dayDisplay}</p>
           </div>
-          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+          <button className="modal-close" onClick={onClose} disabled={saving}>
+            <X size={18} />
+          </button>
         </div>
 
-        <div className="modal-body">
-          {/* Tab switch */}
-          <div className="modal-tabs">
-            <button
-              className={`modal-tab ${mode === 'recipe' ? 'active' : ''}`}
-              onClick={() => setMode('recipe')}
-            >
-              From recipes
-            </button>
-            <button
-              className={`modal-tab ${mode === 'custom' ? 'active' : ''}`}
-              onClick={() => setMode('custom')}
-            >
-              Custom meal
-            </button>
-          </div>
+        {/* ── Body — non-preview modes ── */}
+        {!isPreview && (
+          <div className="modal-body">
+            {/* Tab switch */}
+            <div className="modal-tabs">
+              <button
+                className={`modal-tab ${mode === 'recipe' ? 'active' : ''}`}
+                onClick={() => { setMode('recipe'); setCustomPhase('input') }}
+              >
+                From recipes
+              </button>
+              <button
+                className={`modal-tab ${mode === 'custom' ? 'active' : ''}`}
+                onClick={() => setMode('custom')}
+              >
+                Custom meal
+              </button>
+            </div>
 
-          {mode === 'recipe' ? (
-            <>
-              <div className="modal-search-wrap">
-                <Search size={14} />
-                <input
-                  className="modal-search"
-                  placeholder="Search recipes…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  autoFocus
-                />
-              </div>
-
-              <div className="recipe-results">
-                {recipesLoading ? (
-                  <div className="results-empty">
-                    <Loader2 size={18} className="spin-icon" style={{ margin: '0 auto', display: 'block' }} />
-                  </div>
-                ) : recipeData?.recipes.length === 0 ? (
-                  <div className="results-empty">No recipes found. Try a different search.</div>
-                ) : (
-                  recipeData?.recipes.map((r) => (
-                    <button
-                      key={r.id}
-                      className="recipe-result-item"
-                      onClick={() => onConfirm({ recipeId: r.id })}
-                    >
-                      {r.imageUrl ? (
-                        <img src={r.imageUrl} alt={r.title} className="recipe-result-img" />
-                      ) : (
-                        <div className="recipe-result-emoji">🍽️</div>
-                      )}
-                      <div className="recipe-result-info">
-                        <div className="recipe-result-title">{r.title}</div>
-                        <div className="recipe-result-meta">
-                          {[
-                            r.calories && `${r.calories} kcal`,
-                            r.cuisine,
-                          ].filter(Boolean).join(' · ')}
+            {/* Recipe search tab */}
+            {mode === 'recipe' && (
+              <>
+                <div className="modal-search-wrap">
+                  <Search size={14} />
+                  <input
+                    className="modal-search"
+                    placeholder="Search recipes…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="recipe-results">
+                  {recipesLoading ? (
+                    <div className="results-empty">
+                      <Loader2 size={18} className="spin-icon" style={{ margin: '0 auto', display: 'block' }} />
+                    </div>
+                  ) : recipeData?.recipes.length === 0 ? (
+                    <div className="results-empty">No recipes found. Try a different search.</div>
+                  ) : (
+                    recipeData?.recipes.map((r) => (
+                      <button
+                        key={r.id}
+                        className="recipe-result-item"
+                        onClick={() => onConfirm({ recipeId: r.id })}
+                      >
+                        {r.imageUrl ? (
+                          <img src={r.imageUrl} alt={r.title} className="recipe-result-img" />
+                        ) : (
+                          <div className="recipe-result-emoji">🍽️</div>
+                        )}
+                        <div className="recipe-result-info">
+                          <div className="recipe-result-title">{r.title}</div>
+                          <div className="recipe-result-meta">
+                            {[r.calories && `${r.calories} kcal`, r.cuisine].filter(Boolean).join(' · ')}
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="modal-field">
-                <label>Meal name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Overnight oats, Leftover pasta…"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div className="modal-field">
-                <label>Notes (optional)</label>
-                <textarea
-                  placeholder="e.g. approx 450 kcal, prep the night before…"
-                  value={customNotes}
-                  onChange={(e) => setCustomNotes(e.target.value)}
-                />
-              </div>
-            </>
-          )}
-        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
 
-        {mode === 'custom' && (
+            {/* Custom meal tab — generating spinner */}
+            {mode === 'custom' && customPhase === 'generating' && (
+              <div className="custom-generating">
+                <Loader2 size={24} className="custom-generating-spin" />
+                <p>Generating recipe for <strong>"{customName}"</strong></p>
+                <span>This takes about 10 seconds…</span>
+              </div>
+            )}
+
+            {/* Custom meal tab — input form */}
+            {mode === 'custom' && customPhase === 'input' && (
+              <>
+                <div className="modal-field">
+                  <label>Meal name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Butter Chicken, Overnight Oats…"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && customName.trim() && handleGenerate()}
+                    autoFocus
+                  />
+                </div>
+                <div className="modal-field">
+                  <label>Notes (optional)</label>
+                  <textarea
+                    placeholder="e.g. approx 450 kcal, prep the night before…"
+                    value={customNotes}
+                    onChange={(e) => setCustomNotes(e.target.value)}
+                  />
+                </div>
+                {genError && <p className="custom-gen-error">{genError}</p>}
+                {/* Generate button */}
+                <button
+                  className="generate-recipe-btn"
+                  disabled={!customName.trim()}
+                  onClick={handleGenerate}
+                >
+                  <Sparkles size={14} />
+                  Generate Recipe with AI
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Body — preview / edit recipe ── */}
+        {isPreview && editableRecipe && (
+          <div className="modal-body recipe-preview-body">
+
+            {/* Title */}
+            <div className="preview-field">
+              <label>Recipe title</label>
+              <input
+                type="text"
+                value={editableRecipe.title}
+                onChange={(e) => setEditableRecipe((r) => r ? { ...r, title: e.target.value } : r)}
+              />
+            </div>
+
+            {/* Description */}
+            <div className="preview-field">
+              <label>Description</label>
+              <textarea
+                value={editableRecipe.description}
+                onChange={(e) => setEditableRecipe((r) => r ? { ...r, description: e.target.value } : r)}
+              />
+            </div>
+
+            {/* Time + Servings row */}
+            <div className="preview-field-row">
+              <div className="preview-field">
+                <label><Clock size={11} /> Prep (min)</label>
+                <input
+                  type="number" min={0}
+                  value={editableRecipe.prepTimeMinutes}
+                  onChange={(e) => setEditableRecipe((r) => r ? { ...r, prepTimeMinutes: e.target.value === '' ? '' : Number(e.target.value) } : r)}
+                />
+              </div>
+              <div className="preview-field">
+                <label><Clock size={11} /> Cook (min)</label>
+                <input
+                  type="number" min={0}
+                  value={editableRecipe.cookTimeMinutes}
+                  onChange={(e) => setEditableRecipe((r) => r ? { ...r, cookTimeMinutes: e.target.value === '' ? '' : Number(e.target.value) } : r)}
+                />
+              </div>
+              <div className="preview-field">
+                <label><Users size={11} /> Servings</label>
+                <input
+                  type="number" min={1}
+                  value={editableRecipe.servings}
+                  onChange={(e) => setEditableRecipe((r) => r ? { ...r, servings: e.target.value === '' ? '' : Number(e.target.value) } : r)}
+                />
+              </div>
+            </div>
+
+            {/* Macros */}
+            <div className="preview-macros">
+              {(
+                [
+                  { key: 'calories', label: 'Calories', unit: 'kcal', color: 'coral' },
+                  { key: 'protein',  label: 'Protein',  unit: 'g',    color: 'teal'  },
+                  { key: 'carbs',    label: 'Carbs',    unit: 'g',    color: 'amber' },
+                  { key: 'fat',      label: 'Fat',      unit: 'g',    color: 'blue'  },
+                ] as const
+              ).map(({ key, label, unit, color }) => (
+                <div key={key} className={`preview-macro-field preview-macro-field--${color}`}>
+                  <label>{label}</label>
+                  <div className="preview-macro-input-wrap">
+                    <input
+                      type="number" min={0}
+                      value={editableRecipe[key]}
+                      onChange={(e) =>
+                        setEditableRecipe((r) =>
+                          r ? { ...r, [key]: e.target.value === '' ? '' : Number(e.target.value) } : r
+                        )
+                      }
+                    />
+                    <span>{unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Ingredients */}
+            <div className="preview-section">
+              <div className="preview-section-title">Ingredients</div>
+              <div className="preview-ingredients">
+                {editableRecipe.ingredients.map((ing, idx) => (
+                  <div key={idx} className="ingredient-row">
+                    <input
+                      className="ingredient-row-name"
+                      type="text"
+                      placeholder="Ingredient"
+                      value={ing.ingredientName}
+                      onChange={(e) => updateIngredient(idx, 'ingredientName', e.target.value)}
+                    />
+                    <input
+                      className="ingredient-row-qty"
+                      type="number"
+                      placeholder="Qty"
+                      min={0}
+                      value={ing.quantity}
+                      onChange={(e) =>
+                        updateIngredient(idx, 'quantity', e.target.value === '' ? '' : Number(e.target.value))
+                      }
+                    />
+                    <input
+                      className="ingredient-row-unit"
+                      type="text"
+                      placeholder="Unit"
+                      value={ing.unit}
+                      onChange={(e) => updateIngredient(idx, 'unit', e.target.value)}
+                    />
+                    <button
+                      className="ingredient-row-del"
+                      onClick={() => removeIngredient(idx)}
+                      title="Remove ingredient"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+                <button className="add-ingredient-btn" onClick={addIngredient}>
+                  <Plus size={13} /> Add ingredient
+                </button>
+              </div>
+            </div>
+
+            {/* Steps — collapsible */}
+            <div className="preview-section">
+              <button
+                className="preview-steps-toggle"
+                onClick={() => setStepsOpen((v) => !v)}
+              >
+                <span>Steps ({editableRecipe.steps.length})</span>
+                {stepsOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
+              {stepsOpen && (
+                <ol className="preview-steps-list">
+                  {editableRecipe.steps.map((s) => (
+                    <li key={s.stepNumber} className="preview-step-item">
+                      {s.instructionText}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+
+            {genError && <p className="custom-gen-error">{genError}</p>}
+          </div>
+        )}
+
+        {/* ── Footer ── */}
+        {!isPreview && mode === 'custom' && customPhase === 'input' && (
           <div className="modal-footer">
             <button className="modal-cancel-btn" onClick={onClose}>Cancel</button>
             <button
-              className="modal-confirm-btn"
-              disabled={!canConfirmCustom}
+              className="modal-confirm-btn modal-confirm-btn--ghost"
+              disabled={!customName.trim()}
               onClick={() =>
                 onConfirm({
                   customMealName: customName.trim(),
@@ -210,7 +504,28 @@ function AddMealModal({
               }
             >
               <Check size={14} />
-              Add meal
+              Add as custom
+            </button>
+          </div>
+        )}
+
+        {isPreview && (
+          <div className="modal-footer">
+            <button
+              className="modal-cancel-btn"
+              onClick={() => setCustomPhase('input')}
+              disabled={saving}
+            >
+              <ArrowLeft size={14} style={{ marginRight: 4 }} />
+              Back
+            </button>
+            <button
+              className="modal-confirm-btn"
+              onClick={handleSaveAndAdd}
+              disabled={saving || !editableRecipe?.title.trim()}
+            >
+              {saving ? <Loader2 size={14} className="spin-icon" /> : <Check size={14} />}
+              {saving ? 'Saving…' : 'Save & Add to Planner'}
             </button>
           </div>
         )}
