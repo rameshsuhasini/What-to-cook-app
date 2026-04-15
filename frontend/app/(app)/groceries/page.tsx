@@ -3,7 +3,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   ShoppingCart, CheckSquare, Square, Trash2, Plus,
   RefreshCw, ChevronDown, ChevronUp, Sparkles,
@@ -36,7 +35,6 @@ const itemVariants = {
 
 export default function GroceriesPage() {
   const queryClient = useQueryClient()
-  const router = useRouter()
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
   const [showAddModal, setShowAddModal] = useState(false)
   const [showGenModal, setShowGenModal] = useState(false)
@@ -109,24 +107,28 @@ export default function GroceriesPage() {
   })
 
   const moveToPantryMutation = useMutation({
-    mutationFn: async (listId: string) => {
-      // Collect all items from all categories
-      const allItems = (list?.categories ?? [])
-        .flatMap(c => c.items)
-        .map(i => ({
-          ingredientName: i.ingredientName,
-          ...(i.quantity !== null && { quantity: i.quantity }),
-          ...(i.unit !== null && { unit: i.unit }),
-        }))
-      const added = await pantryApi.bulkAddItems(allItems)
-      await groceryApi.deleteList(listId)
+    mutationFn: async () => {
+      const allItems = (list?.categories ?? []).flatMap(c => c.items)
+      const checked = allItems.filter(i => i.isChecked)
+      if (checked.length === 0) return 0
+      const pantryItems = checked.map(i => ({
+        ingredientName: i.ingredientName,
+        ...(i.quantity !== null && { quantity: i.quantity }),
+        ...(i.unit !== null && { unit: i.unit }),
+      }))
+      const added = await pantryApi.bulkAddItems(pantryItems)
+      // If every item is checked, wipe the whole list; otherwise remove only those items
+      if (checked.length === allItems.length && listId) {
+        await groceryApi.deleteList(listId)
+      } else {
+        await Promise.all(checked.map(i => groceryApi.deleteItem(i.id)))
+      }
       return added.length
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['grocery-list'] })
       queryClient.invalidateQueries({ queryKey: ['pantry'] })
-      showToast(`${count} item${count !== 1 ? 's' : ''} added to your pantry 📦`)
-      router.push('/pantry')
+      showToast(`${count} item${count !== 1 ? 's' : ''} moved to pantry`)
     },
     onError: () => showToast('Failed to move items to pantry', 'error'),
   })
@@ -145,6 +147,7 @@ export default function GroceriesPage() {
 
   // ── Share helpers ─────────────────────────
 
+  // Only include unchecked (still-needed) items in the downloadable text
   const formatListAsText = (): string => {
     if (!list) return ''
     const lines: string[] = []
@@ -153,14 +156,18 @@ export default function GroceriesPage() {
     lines.push('🛒  GROCERY LIST')
     lines.push(hr)
 
+    let remaining = 0
     for (const cat of list.categories) {
+      const unchecked = cat.items.filter(i => !i.isChecked)
+      if (unchecked.length === 0) continue
+      remaining += unchecked.length
+
       lines.push('')
       lines.push(`  ${cat.name.toUpperCase()}`)
 
-      // Find longest name in this category for column alignment
-      const maxLen = cat.items.reduce((m, i) => Math.max(m, i.ingredientName.length), 0)
+      const maxLen = unchecked.reduce((m, i) => Math.max(m, i.ingredientName.length), 0)
 
-      for (const item of cat.items) {
+      for (const item of unchecked) {
         const qty = item.quantity
           ? `${item.quantity}${item.unit ? ' ' + item.unit : ''}`
           : ''
@@ -171,9 +178,7 @@ export default function GroceriesPage() {
 
     lines.push('')
     lines.push(hr)
-    if (summary) {
-      lines.push(`  ${summary.totalItems} item${summary.totalItems !== 1 ? 's' : ''} total`)
-    }
+    lines.push(`  ${remaining} item${remaining !== 1 ? 's' : ''} to buy`)
 
     return lines.join('\n')
   }
@@ -232,7 +237,7 @@ export default function GroceriesPage() {
   const list = groceryData
   const listId = list?.list?.id
   const summary = list?.summary
-  const allChecked = summary ? summary.remainingItems === 0 && summary.totalItems > 0 : false
+  const checkedCount = summary?.checkedItems ?? 0
 
   // Meal plan for generate — use current week's plan
   const weekDays = weekView?.days ?? []
@@ -270,11 +275,16 @@ export default function GroceriesPage() {
           {listId && (
             <button
               className="gr-btn gr-btn--ghost"
-              onClick={() => checkAllMutation.mutate({ listId, isChecked: !allChecked })}
+              onClick={() => {
+                const allChecked = summary ? summary.remainingItems === 0 && summary.totalItems > 0 : false
+                checkAllMutation.mutate({ listId, isChecked: !allChecked })
+              }}
               disabled={checkAllMutation.isPending}
             >
-              {allChecked ? <CheckSquare size={16} /> : <Square size={16} />}
-              {allChecked ? 'Uncheck all' : 'Check all'}
+              {checkedCount > 0 && summary?.remainingItems === 0
+                ? <CheckSquare size={16} />
+                : <Square size={16} />}
+              {checkedCount > 0 && summary?.remainingItems === 0 ? 'Uncheck all' : 'Check all'}
             </button>
           )}
           <button
@@ -394,45 +404,46 @@ export default function GroceriesPage() {
         </motion.div>
       )}
 
-      {/* ── Shopping Done banner ── */}
+      {/* ── Floating action bar — appears when any items are checked ── */}
       <AnimatePresence>
-        {allChecked && listId && (
+        {checkedCount > 0 && listId && (
           <motion.div
-            className="gr-done-banner"
-            initial={{ opacity: 0, y: 40, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.97 }}
-            transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+            className="gr-float-bar"
+            initial={{ opacity: 0, y: 80 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 80 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 36 }}
           >
-            <div className="gr-done-content">
-              <div className="gr-done-emoji">🎉</div>
-              <div>
-                <h3 className="gr-done-heading">You got everything!</h3>
-                <p className="gr-done-sub">What would you like to do with your list?</p>
-              </div>
-            </div>
-            <div className="gr-done-actions">
+            <span className="gr-float-info">
+              <Package size={15} />
+              {checkedCount} item{checkedCount !== 1 ? 's' : ''} selected
+            </span>
+            <div className="gr-float-actions">
               <button
-                className="gr-btn gr-btn--primary"
-                onClick={() => moveToPantryMutation.mutate(listId)}
-                disabled={moveToPantryMutation.isPending || deleteListMutation.isPending}
+                className="gr-float-btn gr-float-btn--primary"
+                onClick={() => moveToPantryMutation.mutate()}
+                disabled={moveToPantryMutation.isPending}
               >
                 {moveToPantryMutation.isPending
-                  ? <RefreshCw size={14} className="gr-spin" />
-                  : <Package size={14} />
-                }
-                Move to Pantry
+                  ? <RefreshCw size={13} className="gr-spin" />
+                  : <Package size={13} />}
+                Move to pantry
               </button>
               <button
-                className="gr-btn gr-btn--danger"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={deleteListMutation.isPending || moveToPantryMutation.isPending}
+                className="gr-float-btn gr-float-btn--ghost"
+                onClick={handleDownload}
+                title="Download remaining items"
               >
-                {deleteListMutation.isPending
-                  ? <RefreshCw size={14} className="gr-spin" />
-                  : <Trash2 size={14} />
-                }
-                Clear List
+                <Download size={13} />
+                Download remaining
+              </button>
+              <button
+                className="gr-float-btn gr-float-btn--clear"
+                onClick={() => checkAllMutation.mutate({ listId, isChecked: false })}
+                disabled={checkAllMutation.isPending}
+                title="Uncheck all"
+              >
+                <X size={14} />
               </button>
             </div>
           </motion.div>

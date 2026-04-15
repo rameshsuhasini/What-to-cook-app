@@ -811,51 +811,73 @@
   border-color: var(--coral-400);
 }
 
-/* ── Shopping Done banner ───────────────── */
-.gr-done-banner {
-  margin-bottom: 1.5rem;
-  padding: 1.25rem 1.5rem;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, #e1f5ee 0%, #d4f0e6 50%, #e8f8f0 100%);
-  border: 1.5px solid var(--teal-100);
-  box-shadow: 0 4px 24px rgba(29, 158, 117, 0.12);
+/* ── Floating action bar ────────────────── */
+.gr-float-bar {
+  position: fixed;
+  bottom: 1.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1.25rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem 0.65rem 1rem;
+  background: #0a2218;
+  border-radius: 9999px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.16);
+  white-space: nowrap;
 }
 
-.gr-done-content {
+.gr-float-info {
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
-
-.gr-done-emoji {
-  font-size: 2rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.gr-done-heading {
-  font-family: var(--fd);
-  font-size: 1.15rem;
+  gap: 6px;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: var(--teal-800);
-  margin-bottom: 2px;
+  color: rgba(255,255,255,0.72);
+  padding-right: 0.5rem;
+  border-right: 1px solid rgba(255,255,255,0.12);
 }
 
-.gr-done-sub {
-  font-size: 0.85rem;
-  color: var(--teal-600);
-}
-
-.gr-done-actions {
+.gr-float-actions {
   display: flex;
-  gap: 0.6rem;
-  flex-shrink: 0;
+  align-items: center;
+  gap: 0.4rem;
 }
+
+.gr-float-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.gr-float-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.gr-float-btn:active { transform: translateY(0); }
+.gr-float-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.gr-float-btn--primary {
+  background: #1d9e75;
+  color: #fff;
+}
+
+.gr-float-btn--ghost {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.82);
+}
+.gr-float-btn--ghost:hover { background: rgba(255,255,255,0.16); }
+
+.gr-float-btn--clear {
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  padding: 0.45rem 0.55rem;
+}
+.gr-float-btn--clear:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.08); }
 
 /* ── Delete confirm modal ───────────────── */
 .gr-overlay {
