@@ -564,6 +564,120 @@
 }
 @keyframes ob-spin { to { transform: rotate(360deg); } }
 
+/* ── Generating screen ──────────────────── */
+.ob-gen-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--teal-600) 0%, var(--teal-400) 55%, #29b889 100%);
+  padding: 2rem;
+}
+
+.ob-gen-card {
+  background: white;
+  border-radius: 24px;
+  padding: 3rem 2.5rem;
+  max-width: 440px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+  text-align: center;
+}
+
+.ob-gen-logo {
+  margin-bottom: 0.5rem;
+}
+
+.ob-gen-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--teal-50, #e1f5ee), var(--teal-100, #c3ebdd));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--teal-600, #0f6e56);
+  margin: 0.25rem 0;
+}
+
+.ob-gen-title {
+  font-family: var(--fd, 'Fraunces', Georgia, serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--txt, #1c1a17);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin-top: 0.25rem;
+}
+
+.ob-gen-sub {
+  font-size: 0.88rem;
+  color: var(--txt3, #8a8278);
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.ob-gen-dots {
+  display: flex;
+  gap: 6px;
+  margin: 0.5rem 0;
+}
+
+.ob-gen-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--teal-400, #1d9e75);
+  display: inline-block;
+}
+
+.ob-gen-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.ob-gen-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--teal-50, #e1f5ee);
+  border: 1px solid var(--teal-100, #c3ebdd);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--teal-700, #0a5040);
+  text-align: left;
+}
+
+.ob-gen-item-icon {
+  color: var(--teal-600, #0f6e56);
+  flex-shrink: 0;
+}
+
+.ob-gen-item-label {
+  flex: 1;
+}
+
+.ob-gen-item-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--teal-400, #1d9e75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
 /* ── Responsive ─────────────────────────── */
 @media (max-width: 900px) {
   .ob-brand { display: none; }

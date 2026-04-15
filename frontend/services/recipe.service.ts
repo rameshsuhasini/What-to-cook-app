@@ -101,6 +101,22 @@ export interface CreateRecipePayload {
   steps: { stepNumber: number; instructionText: string }[]
 }
 
+export interface UpdateRecipePayload {
+  title?: string
+  description?: string
+  prepTimeMinutes?: number
+  cookTimeMinutes?: number
+  servings?: number
+  calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  cuisine?: string
+  dietType?: DietType
+  ingredients?: { ingredientName: string; quantity?: number; unit?: string }[]
+  steps?: { stepNumber: number; instructionText: string }[]
+}
+
 // ── API calls ─────────────────────────────────────────────
 
 export const recipeApi = {
@@ -147,6 +163,11 @@ export const recipeApi = {
 
   deleteRecipe: async (id: string): Promise<void> => {
     await api.delete(`/recipes/${id}`)
+  },
+
+  updateRecipe: async (id: string, payload: UpdateRecipePayload): Promise<Recipe> => {
+    const res = await api.put(`/recipes/${id}`, payload)
+    return res.data.data.recipe
   },
 
   generateRecipe: async (payload: GenerateRecipePayload): Promise<Recipe> => {

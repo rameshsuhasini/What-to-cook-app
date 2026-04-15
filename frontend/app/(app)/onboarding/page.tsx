@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChefHat, Target, Leaf, ArrowRight, ArrowLeft,
-  Loader2, Check, Sparkles, User,
+  Loader2, Check, Sparkles, User, Coffee, UtensilsCrossed, Moon,
 } from 'lucide-react'
 import { profileApi, DietType, Gender } from '@/services/profile.service'
+import { aiApi } from '@/services/ai.service'
 import { useQueryClient } from '@tanstack/react-query'
 import Image from 'next/image'
 import './onboarding.css'
@@ -70,6 +71,8 @@ const slideVariants = {
 
 // ── Main page ─────────────────────────────
 
+type Phase = 'form' | 'generating'
+
 export default function OnboardingPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -78,6 +81,7 @@ export default function OnboardingPage() {
   const [dir, setDir] = useState(1)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [phase, setPhase] = useState<Phase>('form')
 
   const [data, setData] = useState<OnboardingData>({
     dietType:        'NONE',
@@ -121,11 +125,27 @@ export default function OnboardingPage() {
         foodPreferences:  data.foodPreferences.trim()  || null,
       })
       await queryClient.invalidateQueries({ queryKey: ['profile'] })
-      router.push('/dashboard')
+
+      // Switch to generating screen, then fire starter pack in background
+      setPhase('generating')
+      setSaving(false)
+
+      try {
+        await aiApi.generateStarterPack()
+      } catch {
+        // Generation failed — still navigate, recipes page shows empty state
+      }
+
+      router.push('/recipes')
     } catch {
       setError('Failed to save. Please try again.')
       setSaving(false)
     }
+  }
+
+  // Show generating screen while starter pack is being built
+  if (phase === 'generating') {
+    return <GeneratingScreen />
   }
 
   return (
@@ -230,6 +250,93 @@ export default function OnboardingPage() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Generating screen ─────────────────────
+
+const GEN_ITEMS = [
+  { icon: <Coffee size={15} />,         label: 'Breakfast recipes',  delay: 0.8 },
+  { icon: <Leaf size={15} />,           label: 'Lunch recipes',      delay: 2.5 },
+  { icon: <Moon size={15} />,           label: 'Dinner recipes',     delay: 4.2 },
+  { icon: <UtensilsCrossed size={15} />, label: 'Personalising to your profile', delay: 6.0 },
+]
+
+function GeneratingScreen() {
+  const [visibleCount, setVisibleCount] = useState(0)
+
+  useEffect(() => {
+    const timers = GEN_ITEMS.map((item, i) =>
+      setTimeout(() => setVisibleCount(i + 1), item.delay * 1000)
+    )
+    return () => timers.forEach(clearTimeout)
+  }, [])
+
+  return (
+    <div className="ob-gen-root">
+      <motion.div
+        className="ob-gen-card"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' as const }}
+      >
+        {/* Logo */}
+        <div className="ob-gen-logo">
+          <Image src="/images/appIcon.png" alt="What to Cook?" width={48} height={48} style={{ objectFit: 'contain', borderRadius: 10 }} />
+        </div>
+
+        {/* Animated chef hat */}
+        <motion.div
+          className="ob-gen-icon"
+          animate={{ rotate: [0, -8, 8, -8, 0] }}
+          transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+        >
+          <ChefHat size={32} />
+        </motion.div>
+
+        <h2 className="ob-gen-title">Building your recipe collection</h2>
+        <p className="ob-gen-sub">Personalised just for you — this takes about 20 seconds</p>
+
+        {/* Progress dots */}
+        <div className="ob-gen-dots">
+          {[0, 1, 2].map(i => (
+            <motion.span
+              key={i}
+              className="ob-gen-dot"
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.3 }}
+            />
+          ))}
+        </div>
+
+        {/* Animated item list */}
+        <div className="ob-gen-items">
+          {GEN_ITEMS.map((item, i) => (
+            <AnimatePresence key={i}>
+              {visibleCount > i && (
+                <motion.div
+                  className="ob-gen-item"
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' as const }}
+                >
+                  <span className="ob-gen-item-icon">{item.icon}</span>
+                  <span className="ob-gen-item-label">{item.label}</span>
+                  <motion.span
+                    className="ob-gen-item-check"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                  >
+                    <Check size={11} />
+                  </motion.span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          ))}
+        </div>
+      </motion.div>
     </div>
   )
 }

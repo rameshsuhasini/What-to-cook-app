@@ -38,6 +38,12 @@ export interface GeneratedRecipe {
   fat: number
 }
 
+export interface StarterPackResult {
+  generated: number
+  total?: number
+  skipped?: boolean
+}
+
 export const aiApi = {
   generateHealthInsights: async (): Promise<HealthInsights> => {
     const res = await api.post('/ai/health-insights')
@@ -65,5 +71,10 @@ export const aiApi = {
   getPantrySuggestions: async (): Promise<AIPantrySuggestions> => {
     const res = await api.post('/ai/pantry-suggestions')
     return res.data.data.suggestions
+  },
+
+  generateStarterPack: async (): Promise<StarterPackResult> => {
+    const res = await api.post('/ai/generate-starter-pack')
+    return res.data.data
   },
 }
