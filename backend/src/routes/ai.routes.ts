@@ -107,6 +107,17 @@ router.post(
   aiController.generateHealthInsights.bind(aiController)
 )
 
+// ── POST /api/ai/generate-starter-pack ───
+// One-time call on onboarding completion.
+// Generous timeout — generates 6 recipes in parallel (~20-30s).
+// Rate limited to 1 call per hour per user (it's idempotent anyway).
+router.post(
+  '/generate-starter-pack',
+  authenticate,
+  createRateLimiter(1, 60 * 60 * 1000),
+  aiController.generateStarterPack.bind(aiController)
+)
+
 // ── POST /api/ai/pantry-suggestions ──────
 router.post(
   '/pantry-suggestions',
