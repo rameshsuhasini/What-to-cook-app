@@ -9,11 +9,12 @@
 
 import { Request, Response, NextFunction } from 'express'
 import { prisma } from '../lib/prisma'
-import { UserContext, AIMealPlanMeal } from '../ai/types/ai.types'
+import { UserContext } from '../ai/types/ai.types'
 import { generateRecipe } from '../ai/recipeGeneratorAI'
 import { generateMealPlan } from '../ai/mealPlanAI'
 import { generateHealthInsights } from '../ai/healthInsightsAI'
 import { generatePantrySuggestions } from '../ai/pantrySuggestionsAI'
+import { generateStarterRecipePlan } from '../ai/starterRecipesAI'
 import recipeRepository from '../repositories/recipe.repository'
 import mealPlanRepository from '../repositories/meal-plan.repository'
 import healthRepository from '../repositories/health.repository'
@@ -91,39 +92,11 @@ export class AIController {
   }
 
   /**
-   * Generate a full recipe from a meal plan slot and save it to the DB.
-   * First checks if the user already has a recipe with the same title —
-   * if so, reuses it instead of generating a duplicate.
-   * Returns the saved recipe ID on success, or null if generation fails.
-   * Failure is intentionally swallowed so one bad slot never kills the whole plan.
-   */
-  private async generateAndSaveRecipe(
-    meal: AIMealPlanMeal,
-    userContext: UserContext,
-    userId: string
-  ): Promise<string | null> {
-    try {
-      // Reuse existing recipe if the AI picked a title already in the library
-      const existing = await recipeRepository.findByTitle(meal.title, userId)
-      if (existing) return existing.id
-
-      const aiRecipe = await generateRecipe(
-        { prompt: `${meal.title} — ${meal.description}` },
-        userContext
-      )
-      const saved = await recipeRepository.create(aiRecipe, userId, true)
-      return saved.id
-    } catch {
-      // Fall back to custom meal name for this slot — don't abort the whole plan
-      return null
-    }
-  }
-
-  /**
    * POST /api/ai/generate-meal-plan
-   * Generates a 7-day meal plan, creates a full recipe for every slot in
-   * parallel, then links each meal plan item to its recipe via recipeId.
-   * Falls back to customMealName for any slot where recipe generation fails.
+   * Generates a 7-day meal plan and saves all meal slots immediately.
+   * Slots are saved as customMealName (with AI-provided macros in notes)
+   * so the response completes quickly without timing out on hosted platforms.
+   * Full recipes are generated on-demand when a user opens a meal slot.
    */
   async generateMealPlan(
     req: Request,
@@ -148,8 +121,10 @@ export class AIController {
 
       const mealPlanId = mealPlan.id
 
-      // Generate full recipes for every meal slot in parallel (per day),
-      // then save each meal plan item once its recipe ID is known.
+      // Save all meal slots immediately as named meals (no inline recipe generation).
+      // This keeps the response well under platform timeout limits (~10s total).
+      // The AI already provides title, description, and estimated macros — enough
+      // to display a rich planner view. Recipe details can be generated on demand.
       await Promise.all(
         aiPlan.days.map(async (day) => {
           const slots = [
@@ -160,18 +135,14 @@ export class AIController {
           ]
 
           await Promise.all(
-            slots.map(async ({ mealType, meal }) => {
-              const recipeId = await this.generateAndSaveRecipe(meal, userContext, userId)
-
-              await mealPlanRepository.addItem(mealPlanId, {
-                date: day.date,
+            slots.map(({ mealType, meal }) =>
+              mealPlanRepository.addItem(mealPlanId, {
+                date:           day.date,
                 mealType,
-                // Prefer the linked recipe; fall back to plain text if generation failed
-                recipeId:       recipeId ?? undefined,
-                customMealName: recipeId ? undefined : meal.title,
-                notes:          recipeId ? undefined : `${meal.description} (~${meal.estimatedCalories} kcal)`,
+                customMealName: meal.title,
+                notes:          `${meal.description} (~${meal.estimatedCalories} kcal | P:${meal.estimatedProtein}g C:${meal.estimatedCarbs}g F:${meal.estimatedFat}g)`,
               })
-            })
+            )
           )
         })
       )
@@ -251,6 +222,57 @@ export class AIController {
       )
 
       res.status(200).json({ success: true, data: { insights } })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * POST /api/ai/generate-starter-pack
+   * Called once after onboarding — generates a personalised set of 6 recipes.
+   * Skips silently if the user already has recipes (idempotent).
+   * Stage 1: AI plans 6 recipe titles based on user profile.
+   * Stage 2: Each recipe is generated in full, in parallel.
+   */
+  async generateStarterPack(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId
+
+      // Idempotency guard — skip if user already has recipes
+      const existingTitles = await recipeRepository.findAllTitles(userId)
+      if (existingTitles.length > 0) {
+        res.status(200).json({ success: true, data: { generated: 0, skipped: true } })
+        return
+      }
+
+      const userContext = await this.getUserContext(userId)
+
+      // Stage 1: Get the planned recipe list from AI
+      const plan = await generateStarterRecipePlan(userContext)
+
+      // Stage 2: Generate each full recipe in parallel.
+      // Individual failures are swallowed so one bad recipe
+      // never kills the whole pack.
+      const results = await Promise.allSettled(
+        plan.map(async (item) => {
+          const aiRecipe = await generateRecipe(
+            { prompt: `${item.title} — ${item.description}` },
+            userContext
+          )
+          return recipeRepository.create(aiRecipe, userId, true)
+        })
+      )
+
+      const generated = results.filter((r) => r.status === 'fulfilled').length
+
+      res.status(201).json({
+        success: true,
+        data: { generated, total: plan.length },
+      })
     } catch (error) {
       next(error)
     }
