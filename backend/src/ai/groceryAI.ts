@@ -157,8 +157,13 @@ PRINCIPLE E — When in doubt:
 ─── RULE 6: Format the canonical name ───
   • Title Case, singular, no preparation words, no parentheses
 
-─── RULE 7: Silently exclude non-purchasable items ───
-  • Water in any form, Ice in any form
+─── RULE 7: Silently exclude basic staples nobody needs to buy ───
+  • Water in any form (tap water, ice water, boiling water, etc.)
+  • Ice in any form
+  • Salt in any form (table salt, kosher salt, sea salt, etc.)
+  • Pepper in any form (black pepper, ground pepper, white pepper, etc.)
+  • Baking soda / bicarbonate of soda
+  • Baking powder
   • Items literally named "to taste" with no ingredient name
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -222,7 +227,7 @@ ABSOLUTE RULES:
   • Exactly ONE entry per canonical ingredient name — no exceptions
   • Quantities rounded to maximum 2 decimal places
   • Standard units only: g, kg, ml, L, tsp, tbsp, cup
-  • No water, no ice in the output
+  • Never include: water, ice, salt, pepper, baking soda, baking powder
   • No categories — that is Stage 2 only
 `
 
@@ -362,6 +367,7 @@ ABSOLUTE RULES:
   • Never use a category not in the allowed list
   • Never include water or ice
   • note must be null for every case except CASE 4
+  • Never include: water, ice, salt, pepper, baking soda, baking powder
 `
 
 // ─────────────────────────────────────────
@@ -422,7 +428,10 @@ const validateStage1Result = (raw: unknown): MergedIngredient[] => {
   return (arr as any[])
     .filter(
       (item) =>
-        item && typeof item.ingredientName === 'string' && item.ingredientName.trim()
+        item &&
+        typeof item.ingredientName === 'string' &&
+        item.ingredientName.trim() &&
+        !isBasicStaple(item.ingredientName)
     )
     .map((item) => ({
       ingredientName: String(item.ingredientName).trim(),
@@ -457,7 +466,10 @@ const validateStage2Result = (raw: unknown): AIAggregatedGroceryItem[] => {
   return (arr as any[])
     .filter(
       (item) =>
-        item && typeof item.ingredientName === 'string' && item.ingredientName.trim()
+        item &&
+        typeof item.ingredientName === 'string' &&
+        item.ingredientName.trim() &&
+        !isBasicStaple(item.ingredientName)
     )
     .map((item) => ({
       ingredientName: String(item.ingredientName).trim(),
@@ -471,6 +483,39 @@ const validateStage2Result = (raw: unknown): AIAggregatedGroceryItem[] => {
       note:
         item.note && String(item.note).trim() ? String(item.note).trim() : null,
     }))
+}
+
+// ─────────────────────────────────────────
+// Basic staples — never need to buy
+// ─────────────────────────────────────────
+//
+// These are items assumed to be in every kitchen.
+// Users can add them manually to the list if they run out.
+
+const BASIC_STAPLES = new Set([
+  // Water & ice
+  'water', 'ice', 'ice water', 'cold water', 'hot water', 'warm water',
+  'boiling water', 'filtered water', 'tap water',
+  // Salt
+  'salt', 'table salt', 'kosher salt', 'sea salt', 'rock salt',
+  'flaky salt', 'iodized salt', 'pink salt', 'himalayan salt',
+  // Pepper
+  'pepper', 'black pepper', 'ground pepper', 'white pepper',
+  'ground black pepper', 'cracked pepper', 'cracked black pepper',
+  // Baking basics
+  'baking soda', 'bicarbonate of soda', 'bicarb', 'bicarb soda',
+  'baking powder',
+])
+
+/** Returns true if an ingredient name matches a basic staple (case-insensitive) */
+function isBasicStaple(name: string): boolean {
+  const normalised = name.toLowerCase().trim().replace(/\s+/g, ' ')
+  if (BASIC_STAPLES.has(normalised)) return true
+  // Also catch anything that is ONLY the word "salt" or "pepper" after stripping
+  // adjectives — e.g. "freshly ground black pepper to taste"
+  if (/\bsalt\b/.test(normalised) && !/\b(smoked|celery|garlic|onion|seasoning)\b/.test(normalised)) return true
+  if (/^(ice\b|water\b)/.test(normalised)) return true
+  return false
 }
 
 // ─────────────────────────────────────────
@@ -532,6 +577,7 @@ function preMerge(ingredients: RawRecipeIngredient[]): RawRecipeIngredient[] {
   const map = new Map<string, RawRecipeIngredient>()
 
   for (const ing of ingredients) {
+    if (isBasicStaple(ing.name)) continue
     const key = `${normalizeName(ing.name)}|${normalizeUnit(ing.unit)}`
     const existing = map.get(key)
 
