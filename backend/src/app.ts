@@ -40,6 +40,16 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Generous timeout for AI endpoints (meal plan generation, etc.)
+// Render's default proxy timeout is 30s; we set 90s here so Express
+// can return a proper error if Claude is slow rather than a hard cut.
+app.use((req, res, next) => {
+  res.setTimeout(90_000, () => {
+    res.status(503).json({ success: false, message: 'Request timed out — please try again.' })
+  })
+  next()
+})
 app.use('/api/recipes', recipeRoutes)
 app.use('/api/meal-plans', mealPlanRoutes)
 app.use('/api/ai', aiRoutes)
