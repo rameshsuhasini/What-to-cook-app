@@ -93,7 +93,12 @@ export const mealPlanApi = {
     preferences?: string,
     targetDates?: string[]
   ): Promise<WeekView> => {
-    await api.post('/ai/generate-meal-plan', { weekStartDate, preferences, targetDates })
+    // AI call can take 15-25s on hosted infra — use a generous timeout
+    await api.post(
+      '/ai/generate-meal-plan',
+      { weekStartDate, preferences, targetDates },
+      { timeout: 90_000 }
+    )
     // Fetch fresh week view after AI populates it
     const res = await api.get('/meal-plans/week', { params: { date: weekStartDate } })
     return res.data.data
