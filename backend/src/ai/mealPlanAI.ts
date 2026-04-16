@@ -23,56 +23,39 @@ const getWeekDates = (weekStartDate: string): string[] => {
 }
 
 const buildSystemPrompt = (user: UserContext, dayCount: number): string => `
-You are an expert nutritionist and meal planning AI for the "What to Cook?" app.
-You create practical, delicious, and nutritionally balanced ${dayCount}-day meal plans.
+You are a meal planning AI for the "What to Cook?" app.
+Generate a concise ${dayCount}-day meal plan. Be brief — short titles and one-sentence descriptions only.
 
 USER PROFILE:
-- Name: ${user.name}
 - Diet Type: ${user.dietType}
-- Allergies/Intolerances: ${user.allergies || 'None'}
+- Allergies: ${user.allergies || 'None'}
 - Health Conditions: ${user.healthConditions || 'None'}
-- Food Preferences: ${user.foodPreferences || 'None specified'}
-- Daily Calorie Goal: ${user.calorieGoal ? `${user.calorieGoal} kcal` : 'Not set (use healthy defaults)'}
-- Protein Goal: ${user.proteinGoal ? `${user.proteinGoal}g` : 'Not set'}
-- Carb Goal: ${user.carbGoal ? `${user.carbGoal}g` : 'Not set'}
-- Fat Goal: ${user.fatGoal ? `${user.fatGoal}g` : 'Not set'}
-- Current Weight: ${user.currentWeightKg ? `${user.currentWeightKg}kg` : 'Not set'}
-- Target Weight: ${user.targetWeightKg ? `${user.targetWeightKg}kg` : 'Not set'}
+- Food Preferences: ${user.foodPreferences || 'None'}
+- Daily Calorie Goal: ${user.calorieGoal ? `${user.calorieGoal} kcal` : 'use healthy defaults'}
+- Protein Goal: ${user.proteinGoal ? `${user.proteinGoal}g` : 'not set'}
+- Carb Goal: ${user.carbGoal ? `${user.carbGoal}g` : 'not set'}
+- Fat Goal: ${user.fatGoal ? `${user.fatGoal}g` : 'not set'}
 
-MEAL PLANNING RULES:
-- NEVER include allergens
-- Strictly respect diet type
-- Vary meals throughout the week — no repeated dinners
-- Balance nutrition across meals to hit daily goals
-- Keep meals practical — achievable for a home cook
-- Consider meal prep efficiency — suggest batch cooking where sensible
-- Each meal must have estimated calories and macros
+RULES:
+- Never include allergens, strictly respect diet type
+- Vary meals — no repeated dinners
+- Keep titles short (3-5 words), descriptions one sentence max
 
 ${JSON_INSTRUCTION}
 
-Respond with this exact JSON schema:
+Respond with ONLY this JSON (no shoppingTips, no nutritionSummary):
 {
-  "weekStartDate": "string (ISO date)",
-  "totalDailyCalories": number (target daily calories),
+  "weekStartDate": "string",
+  "totalDailyCalories": number,
   "days": [
     {
-      "date": "string (ISO date)",
-      "breakfast": {
-        "title": "string",
-        "description": "string",
-        "estimatedCalories": number,
-        "estimatedProtein": number,
-        "estimatedCarbs": number,
-        "estimatedFat": number,
-        "prepTimeMinutes": number
-      },
-      "lunch": { same structure as breakfast },
-      "dinner": { same structure as breakfast },
-      "snack": { same structure as breakfast, optional }
+      "date": "string",
+      "breakfast": { "title": "string", "description": "string", "estimatedCalories": number, "estimatedProtein": number, "estimatedCarbs": number, "estimatedFat": number, "prepTimeMinutes": number },
+      "lunch": { same },
+      "dinner": { same },
+      "snack": { same, optional }
     }
-  ],
-  "shoppingTips": ["string (practical shopping and prep tips)"],
-  "nutritionSummary": "string (2-3 sentence overview of the week's nutrition)"
+  ]
 }
 `
 
@@ -101,20 +84,24 @@ const buildUserMessage = (
 }
 
 const validateMealPlan = (plan: any, expectedDays: number): AIGeneratedMealPlan => {
-  if (!plan.days || !Array.isArray(plan.days) || plan.days.length !== expectedDays) {
-    throw new Error(`AI meal plan must have exactly ${expectedDays} day(s), got ${plan.days?.length ?? 0}`)
+  if (!plan.days || !Array.isArray(plan.days) || plan.days.length === 0) {
+    throw new Error('AI meal plan returned no days')
   }
 
-  for (const day of plan.days) {
-    if (!day.breakfast || !day.lunch || !day.dinner) {
-      throw new Error('Each day must have breakfast, lunch, and dinner')
-    }
+  // Trim extra days if AI returned more than requested; accept fewer gracefully
+  const days = plan.days.slice(0, expectedDays).filter(
+    (day: any) => day.breakfast && day.lunch && day.dinner
+  )
+
+  if (days.length === 0) {
+    throw new Error('AI meal plan days are missing required meals')
   }
 
   return {
     ...plan,
-    shoppingTips: Array.isArray(plan.shoppingTips) ? plan.shoppingTips : [],
-    nutritionSummary: plan.nutritionSummary || '',
+    days,
+    shoppingTips: [],
+    nutritionSummary: '',
   }
 }
 
