@@ -41,7 +41,7 @@ const MODEL = 'claude-sonnet-4-20250514'
 
 export const TOKEN_LIMITS = {
   recipeGenerator: 2000,
-  mealPlanGenerator: 8000,
+  mealPlanGenerator: 4000,
   healthInsights: 1500,
   pantrySuggestions: 3000,
   groceryAggregator: 8000,  // full week output: ~50-80 unique items
