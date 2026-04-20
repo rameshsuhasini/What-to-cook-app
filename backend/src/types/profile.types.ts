@@ -1,9 +1,10 @@
-import { DietType, Gender } from '@prisma/client'
+import { DietType, Gender, ActivityLevel } from '@prisma/client'
 
 export interface UpdateProfileDTO {
   age?: number | null
   gender?: Gender | null
   heightCm?: number | null
+  activityLevel?: ActivityLevel | null
   weightKg?: number | null
   targetWeightKg?: number | null
   dietType?: DietType
