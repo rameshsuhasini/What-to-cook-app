@@ -4,6 +4,7 @@ const formApi = api
 
 export type DietType = 'NONE' | 'VEGETARIAN' | 'VEGAN' | 'KETO' | 'PALEO'
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY'
+export type ActivityLevel = 'SEDENTARY' | 'LIGHT' | 'MODERATE' | 'ACTIVE' | 'VERY_ACTIVE'
 
 export interface UserProfile {
   id: string
@@ -11,6 +12,7 @@ export interface UserProfile {
   age: number | null
   gender: Gender | null
   heightCm: number | null
+  activityLevel: ActivityLevel | null
   weightKg: number | null
   targetWeightKg: number | null
   dietType: DietType
@@ -28,6 +30,7 @@ export interface UpdateProfilePayload {
   age?: number | null
   gender?: Gender | null
   heightCm?: number | null
+  activityLevel?: ActivityLevel | null
   weightKg?: number | null
   targetWeightKg?: number | null
   dietType?: DietType
