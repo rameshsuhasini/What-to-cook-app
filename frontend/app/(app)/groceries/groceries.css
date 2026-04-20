@@ -879,6 +879,34 @@
 }
 .gr-float-btn--clear:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.08); }
 
+/* ── Delete list subtle row ─────────────── */
+.gr-delete-row {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0 0.5rem;
+}
+
+.gr-delete-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--fb);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--txt3);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+
+.gr-delete-link:hover {
+  color: var(--coral-600);
+  background: var(--coral-50);
+}
+
 /* ── Delete confirm modal ───────────────── */
 .gr-overlay {
   position: fixed;
