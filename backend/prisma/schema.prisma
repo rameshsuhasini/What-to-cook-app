@@ -48,6 +48,14 @@ enum Gender {
   PREFER_NOT_TO_SAY
 }
 
+enum ActivityLevel {
+  SEDENTARY    // Little or no exercise — desk job
+  LIGHT        // Light exercise 1-3 days/week
+  MODERATE     // Moderate exercise 3-5 days/week
+  ACTIVE       // Hard exercise 6-7 days/week
+  VERY_ACTIVE  // Very hard exercise or physical job
+}
+
 // ─────────────────────────────────────────
 // USER
 // Core auth entity — minimal data here
@@ -94,6 +102,7 @@ model UserProfile {
   age             Int?
   gender          Gender?
   heightCm        Int?      @map("height_cm")
+  activityLevel   ActivityLevel? @map("activity_level")
   weightKg        Decimal?  @map("weight_kg") @db.Decimal(5, 2)
   targetWeightKg  Decimal?  @map("target_weight_kg") @db.Decimal(5, 2)
   dietType        DietType  @default(NONE) @map("diet_type")
