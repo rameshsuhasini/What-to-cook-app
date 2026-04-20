@@ -39,6 +39,37 @@ function bmiCategory(bmi: number): { label: string; color: 'teal' | 'amber' | 'c
   return               { label: 'Obese',         color: 'coral' }
 }
 
+// ── TDEE helpers ──────────────────────────
+
+const ACTIVITY_MULTIPLIERS: Record<string, number> = {
+  SEDENTARY:   1.2,
+  LIGHT:       1.375,
+  MODERATE:    1.55,
+  ACTIVE:      1.725,
+  VERY_ACTIVE: 1.9,
+}
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  SEDENTARY:   'Sedentary',
+  LIGHT:       'Lightly active',
+  MODERATE:    'Moderately active',
+  ACTIVE:      'Very active',
+  VERY_ACTIVE: 'Extra active',
+}
+
+function calcTDEE(
+  weightKg: number,
+  heightCm: number,
+  age: number,
+  gender: string | null,
+  activityLevel: string
+): number {
+  // Mifflin-St Jeor BMR
+  const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age)
+  const bmr = gender === 'MALE' ? base + 5 : gender === 'FEMALE' ? base - 161 : base - 78
+  return Math.round(bmr * (ACTIVITY_MULTIPLIERS[activityLevel] ?? 1.55))
+}
+
 // ── Custom tooltips ──────────────────────
 
 function WeightTooltip({ active, payload, label }: any) {
@@ -150,6 +181,15 @@ export default function ProgressPage() {
     ? parseFloat(calcBMI(currentWeight, profileHeight).toFixed(1))
     : null
   const bmiInfo = bmi ? bmiCategory(bmi) : null
+
+  // TDEE — needs weight, height, age, gender, activityLevel
+  const profileAge          = profile?.age ?? null
+  const profileGender       = profile?.gender ?? null
+  const profileActivityLevel = profile?.activityLevel ?? null
+  const tdee = currentWeight && profileHeight && profileAge && profileActivityLevel
+    ? calcTDEE(currentWeight, profileHeight, profileAge, profileGender, profileActivityLevel)
+    : null
+  const tdeeActivityLabel = profileActivityLevel ? ACTIVITY_LABELS[profileActivityLevel] : null
 
   // Sort logs ascending (oldest first) — API may return newest-first
   const sortedWeightLogs = [...weightLogs]
@@ -265,6 +305,15 @@ export default function ProgressPage() {
           icon={<Activity size={18} />}
           color={bmiInfo?.color ?? 'neutral'}
           extra={bmiInfo?.label}
+        />
+
+        {/* TDEE */}
+        <StatCard
+          label="Daily energy (TDEE)"
+          value={tdee != null ? `${tdee} kcal` : '—'}
+          icon={<Flame size={18} />}
+          color="coral"
+          extra={tdee != null ? tdeeActivityLabel ?? undefined : 'Set activity level in profile'}
         />
 
         {/* Today's calories */}
