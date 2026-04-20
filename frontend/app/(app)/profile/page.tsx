@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { User, Activity, Target, Save, Loader2, Check, Camera } from 'lucide-react'
-import { profileApi, DietType, Gender } from '@/services/profile.service'
+import { profileApi, DietType, Gender, ActivityLevel } from '@/services/profile.service'
 import { useAuthStore } from '@/store/auth.store'
 import AvatarCropModal from '@/components/AvatarCropModal'
 
@@ -22,6 +22,14 @@ const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: 'FEMALE',            label: 'Female' },
   { value: 'OTHER',             label: 'Other' },
   { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say' },
+]
+
+const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string; desc: string }[] = [
+  { value: 'SEDENTARY',   label: 'Sedentary',          desc: 'Desk job, little exercise' },
+  { value: 'LIGHT',       label: 'Lightly active',     desc: 'Exercise 1–3 days/week' },
+  { value: 'MODERATE',    label: 'Moderately active',  desc: 'Exercise 3–5 days/week' },
+  { value: 'ACTIVE',      label: 'Very active',        desc: 'Hard exercise 6–7 days/week' },
+  { value: 'VERY_ACTIVE', label: 'Extra active',       desc: 'Physical job or 2× training' },
 ]
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
@@ -45,6 +53,7 @@ export default function ProfilePage() {
     age:             '',
     gender:          '' as Gender | '',
     heightCm:        '',
+    activityLevel:   '' as ActivityLevel | '',
     weightKg:        '',
     targetWeightKg:  '',
     dietType:        'NONE' as DietType,
@@ -63,6 +72,7 @@ export default function ProfilePage() {
       age:              profile.age?.toString()            ?? '',
       gender:           profile.gender                     ?? '',
       heightCm:         profile.heightCm?.toString()       ?? '',
+      activityLevel:    profile.activityLevel              ?? '',
       weightKg:         profile.weightKg != null ? String(profile.weightKg) : '',
       targetWeightKg:   profile.targetWeightKg != null ? String(profile.targetWeightKg) : '',
       dietType:         profile.dietType                   ?? 'NONE',
@@ -82,6 +92,7 @@ export default function ProfilePage() {
         age:             form.age ? parseInt(form.age) : null,
         gender:          form.gender || null,
         heightCm:        form.heightCm ? parseInt(form.heightCm) : null,
+        activityLevel:   (form.activityLevel as ActivityLevel) || null,
         weightKg:        form.weightKg ? parseFloat(form.weightKg) : null,
         targetWeightKg:  form.targetWeightKg ? parseFloat(form.targetWeightKg) : null,
         dietType:        form.dietType,
@@ -227,6 +238,15 @@ export default function ProfilePage() {
             <label>Height (cm)</label>
             <input type="number" placeholder="e.g. 175" value={form.heightCm}
               onChange={(e) => set('heightCm', e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Activity level</label>
+            <select value={form.activityLevel} onChange={(e) => set('activityLevel', e.target.value)}>
+              <option value="">Select activity level</option>
+              {ACTIVITY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label} — {o.desc}</option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label>Current weight (kg)</label>
