@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth.store'
 import { authApi } from '@/services/auth.service'
+import { profileApi } from '@/services/profile.service'
+import { useQuery } from '@tanstack/react-query'
 
 const NAV_ITEMS = [
   { href: '/dashboard',      label: 'Dashboard',    icon: LayoutDashboard },
@@ -35,6 +37,12 @@ export default function Sidebar() {
   const [greeting, setGreeting] = useState('')
   const [dateStr, setDateStr] = useState('')
   const logoutRef = useRef<HTMLDivElement>(null)
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: profileApi.getProfile,
+    staleTime: 5 * 60 * 1000,
+  })
 
   // Hydration-safe: only read localStorage + Date on the client
   useEffect(() => {
@@ -186,7 +194,10 @@ export default function Sidebar() {
       <div className="sidebar-footer">
         <div className="sidebar-user">
           <div className="user-avatar">
-            {user?.name?.charAt(0).toUpperCase() ?? 'U'}
+            {profile?.avatarUrl
+              ? <img src={profile.avatarUrl} alt={user?.name ?? 'avatar'} style={{ borderRadius: '50%', objectFit: 'cover', width: '100%', height: '100%' }} />
+              : (user?.name?.charAt(0).toUpperCase() ?? 'U')
+            }
           </div>
           <AnimatePresence initial={false}>
             {!collapsed && (

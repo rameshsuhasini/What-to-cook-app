@@ -508,6 +508,9 @@
   overflow-y: auto;
 }
 
+/* ── Mobile header (hidden on desktop/tablet) ── */
+.mobile-header { display: none; }
+
 /* ── Responsive ────────────────────────── */
 @media (max-width: 900px) {
   .app-layout { flex-direction: column; }
@@ -539,19 +542,148 @@
   .sidebar-footer { padding-top: 0; border-top: none; }
   .user-info { display: none; }
   .sidebar-logo span { display: none; }
+}
 
-  /* ── Mobile bottom navigation ── */
+/* ── Mobile breakpoint: swap sidebar for mobile header ── */
+@media (max-width: 640px) {
+  /* Hide the desktop sidebar entirely */
+  .sidebar { display: none; }
+
+  /* Show mobile header */
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0.75rem 1rem;
+    background: rgba(250, 247, 244, 0.97);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--sand-200);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  }
+
   .app-main {
-    padding-bottom: 68px; /* room for bottom nav */
+    padding-bottom: 72px; /* room for bottom nav */
   }
 }
 
-/* ── Bottom Nav (mobile only) ──────────── */
-.bottom-nav {
-  display: none;
+/* ── Mobile header internals ─────────────── */
+.mobile-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
 }
 
-@media (max-width: 900px) {
+.mobile-header-appname {
+  font-family: var(--fd);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--txt);
+  white-space: nowrap;
+}
+
+.mobile-header-right {
+  position: relative;
+}
+
+.mobile-header-user {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-md);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 150ms;
+}
+
+.mobile-header-user:hover,
+.mobile-header-user:active {
+  background: var(--sand-100);
+}
+
+.mobile-header-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal-400), var(--teal-600));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.mobile-header-name {
+  font-family: var(--fb);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--txt);
+}
+
+.mobile-header-dots {
+  color: var(--txt3);
+  flex-shrink: 0;
+}
+
+/* ── Dropdown ──────────────────────────── */
+.mobile-header-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  background: white;
+  border: 1px solid var(--sand-200);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  z-index: 300;
+}
+
+.mh-drop-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--fb);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--txt);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 120ms;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mh-drop-item:hover,
+.mh-drop-item:active { background: var(--sand-100); }
+
+.mh-drop-item--danger { color: var(--coral-600); }
+.mh-drop-item--danger:hover { background: var(--coral-50); }
+
+.mh-drop-divider {
+  height: 1px;
+  background: var(--sand-200);
+  margin: 4px 0;
+}
+
+/* ── Bottom Nav (mobile only) ──────────── */
+.bottom-nav { display: none; }
+
+@media (max-width: 640px) {
   .bottom-nav {
     display: flex;
     position: fixed;
@@ -600,13 +732,8 @@
 
   .bottom-nav-item span { position: relative; z-index: 1; }
 
-  .bottom-nav-item--active {
-    color: var(--teal-700);
-  }
-
-  .bottom-nav-item--active svg {
-    stroke-width: 2.25;
-  }
+  .bottom-nav-item--active { color: var(--teal-700); }
+  .bottom-nav-item--active svg { stroke-width: 2.25; }
 }
 
 /* ── Shared modal primitives (used across pages) ── */

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, UtensilsCrossed, Calendar,
-  ShoppingCart, Apple, TrendingUp, User,
+  ShoppingCart, Apple,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -14,8 +14,6 @@ const NAV_ITEMS = [
   { href: '/weekly-planner', label: 'Planner', icon: Calendar },
   { href: '/groceries',      label: 'Grocery', icon: ShoppingCart },
   { href: '/pantry',         label: 'Pantry',  icon: Apple },
-  { href: '/progress',       label: 'Progress',icon: TrendingUp },
-  { href: '/profile',        label: 'Profile', icon: User },
 ]
 
 export default function BottomNav() {
