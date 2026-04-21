@@ -77,6 +77,31 @@ export class GroceryController {
 
       res.status(201).json({ success: true, data: { list } })
     } catch (error) {
+      // Known user-facing errors — return a friendly 409 instead of a 500
+      if (error instanceof Error) {
+        const msg = error.message
+        if (msg.includes('No new ingredients')) {
+          res.status(409).json({
+            success: false,
+            message: 'Grocery list already up to date — no new ingredients to add for the selected days.',
+          })
+          return
+        }
+        if (msg.includes('No ingredients found')) {
+          res.status(409).json({
+            success: false,
+            message: 'No ingredients found for the selected days. Make sure your meals have linked recipes.',
+          })
+          return
+        }
+        if (msg.includes('pantry already covers')) {
+          res.status(409).json({
+            success: false,
+            message: 'Your pantry already covers everything needed for the selected days. Nothing to add!',
+          })
+          return
+        }
+      }
       next(error)
     }
   }
