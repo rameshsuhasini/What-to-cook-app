@@ -91,16 +91,30 @@ export const mealPlanApi = {
   generateAIMealPlan: async (
     weekStartDate: string,
     preferences?: string,
-    targetDates?: string[]
-  ): Promise<WeekView> => {
+    targetDates?: string[],
+    usePantry?: boolean
+  ): Promise<{ weekView: WeekView; newItemIds: string[] }> => {
     // AI call can take 15-25s on hosted infra — use a generous timeout
-    await api.post(
+    const aiRes = await api.post(
       '/ai/generate-meal-plan',
-      { weekStartDate, preferences, targetDates },
+      { weekStartDate, preferences, targetDates, usePantry },
       { timeout: 90_000 }
     )
+    // Capture newly created item IDs before refetching
+    const newItemIds: string[] =
+      aiRes.data?.data?.mealPlan?.items?.map((item: { id: string }) => item.id) ?? []
+
     // Fetch fresh week view after AI populates it
-    const res = await api.get('/meal-plans/week', { params: { date: weekStartDate } })
-    return res.data.data
+    const weekRes = await api.get('/meal-plans/week', { params: { date: weekStartDate } })
+    return { weekView: weekRes.data.data, newItemIds }
+  },
+
+  generateSlotRecipe: async (mealPlanItemId: string): Promise<void> => {
+    // Single slot recipe generation — each call is ~8-12s
+    await api.post(
+      '/ai/generate-slot-recipe',
+      { mealPlanItemId },
+      { timeout: 60_000 }
+    )
   },
 }
