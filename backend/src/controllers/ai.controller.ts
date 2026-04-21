@@ -107,7 +107,13 @@ export class AIController {
       const userId = req.user!.userId
       const userContext = await this.getUserContext(userId)
 
-      const aiPlan = await generateMealPlan(req.body, userContext)
+      // Fetch pantry so the AI can prioritise meals that use what's already at home
+      const pantryIngredients = await pantryRepository.getAllIngredientNames(userId)
+
+      const aiPlan = await generateMealPlan(
+        { ...req.body, pantryIngredients },
+        userContext
+      )
 
       // Use the requested weekStartDate — not the AI's returned value —
       // so the plan always lands on the correct DB week record.
@@ -273,6 +279,56 @@ export class AIController {
         success: true,
         data: { generated, total: plan.length },
       })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * POST /api/ai/generate-slot-recipe
+   * Generates a full recipe for a single meal plan item and links it.
+   * Called sequentially by the frontend after a meal plan is created.
+   * Pantry items are always used here — the toggle only affects title selection.
+   * Idempotent: if the slot already has a recipeId, returns immediately.
+   */
+  async generateSlotRecipe(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId
+      const { mealPlanItemId } = req.body
+
+      const item = await mealPlanRepository.findItemById(mealPlanItemId)
+      if (!item || item.mealPlan.userId !== userId) {
+        res.status(404).json({ success: false, message: 'Meal plan item not found' })
+        return
+      }
+
+      // Idempotent — already has a linked recipe
+      if (item.recipeId) {
+        res.status(200).json({ success: true, data: { itemId: item.id } })
+        return
+      }
+
+      const userContext = await this.getUserContext(userId)
+      const pantryIngredients = await pantryRepository.getAllIngredientNames(userId)
+
+      // Build a prompt that includes the meal type for better recipe targeting
+      const mealLabel = item.mealType.charAt(0) + item.mealType.slice(1).toLowerCase()
+      const prompt = `${item.customMealName ?? 'healthy meal'} (${mealLabel})`
+
+      const aiRecipe = await generateRecipe(
+        { prompt, availableIngredients: pantryIngredients },
+        userContext
+      )
+
+      const savedRecipe = await recipeRepository.create(aiRecipe, userId, true)
+
+      await mealPlanRepository.updateItem(item.id, { recipeId: savedRecipe.id })
+
+      res.status(200).json({ success: true, data: { itemId: item.id } })
     } catch (error) {
       next(error)
     }
