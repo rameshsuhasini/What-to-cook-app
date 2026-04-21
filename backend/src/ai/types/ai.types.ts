@@ -60,9 +60,11 @@ export interface AIGeneratedRecipe {
 // ── Meal Plan Generator ──────────────────
 
 export interface GenerateMealPlanDTO {
-  weekStartDate: string       // ISO date string
-  targetDates?: string[]      // Specific dates to fill (subset of the week)
-  preferences?: string        // Any extra user instructions
+  weekStartDate: string        // ISO date string
+  targetDates?: string[]       // Specific dates to fill (subset of the week)
+  preferences?: string         // Any extra user instructions
+  pantryIngredients?: string[] // Ingredients already at home — AI prioritises these
+  usePantry?: boolean          // Whether to inject pantry context into the AI prompt (default true)
 }
 
 export interface AIMealPlanDay {
