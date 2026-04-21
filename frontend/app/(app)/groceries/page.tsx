@@ -4,10 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import {
-  ShoppingCart, CheckSquare, Square, Trash2, Plus,
+  ShoppingCart, Trash2, Plus,
   RefreshCw, ChevronDown, ChevronUp, Sparkles,
   Check, X, ShoppingBag, Calendar, Package,
-  Share2, Download, Copy, MessageCircle,
+  Share2, Download, Copy, MessageCircle, CheckSquare, Square,
 } from 'lucide-react'
 import {
   groceryApi,
@@ -94,7 +94,12 @@ export default function GroceriesPage() {
       setShowGenModal(false)
       showToast(vars.mode === 'merge' ? 'Items added to your list!' : 'Grocery list generated!')
     },
-    onError: (err: Error) => showToast(err.message || 'Failed to generate list', 'error'),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message
+      showToast(msg || 'Failed to generate list', msg ? 'success' : 'error')
+      if (msg) setShowGenModal(false)
+    },
   })
 
   const deleteListMutation = useMutation({
@@ -272,21 +277,6 @@ export default function GroceriesPage() {
           <h1 className="gr-title">Grocery List</h1>
         </div>
         <div className="gr-header-actions">
-          {listId && (
-            <button
-              className="gr-btn gr-btn--ghost"
-              onClick={() => {
-                const allChecked = summary ? summary.remainingItems === 0 && summary.totalItems > 0 : false
-                checkAllMutation.mutate({ listId, isChecked: !allChecked })
-              }}
-              disabled={checkAllMutation.isPending}
-            >
-              {checkedCount > 0 && summary?.remainingItems === 0
-                ? <CheckSquare size={16} />
-                : <Square size={16} />}
-              {checkedCount > 0 && summary?.remainingItems === 0 ? 'Uncheck all' : 'Check all'}
-            </button>
-          )}
           <button
             className="gr-btn gr-btn--secondary"
             onClick={() => setShowGenModal(true)}
@@ -344,17 +334,6 @@ export default function GroceriesPage() {
                 )}
               </AnimatePresence>
             </div>
-          )}
-          {listId && (
-            <button
-              className="gr-btn-delete-list"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={deleteListMutation.isPending}
-              title="Delete grocery list"
-            >
-              <Trash2 size={14} />
-              Delete list
-            </button>
           )}
         </div>
       </motion.header>
@@ -542,6 +521,20 @@ export default function GroceriesPage() {
               </AnimatePresence>
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {/* ── Delete list — subtle danger link below the list ── */}
+      {listId && (
+        <div className="gr-delete-row">
+          <button
+            className="gr-delete-link"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deleteListMutation.isPending}
+          >
+            <Trash2 size={13} />
+            Delete grocery list
+          </button>
         </div>
       )}
 
