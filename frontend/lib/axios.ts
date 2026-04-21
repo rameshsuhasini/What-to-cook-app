@@ -4,6 +4,8 @@ const api = axios.create({
   baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api`,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
+  // Default 30s — overridden per-request for AI endpoints below
+  timeout: 30_000,
 })
 
 // Attach Bearer token from Zustand store on every request
