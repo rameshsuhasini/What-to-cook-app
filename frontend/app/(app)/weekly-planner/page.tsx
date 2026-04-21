@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 import { mealPlanApi, MealPlanItem, MealType, WeekView } from '@/services/meal-plan.service'
 import { recipeApi, Recipe } from '@/services/recipe.service'
-import { useRouter } from 'next/navigation'
 import { NutritionProgressRings } from './NutritionProgressRings'
 import { TodaysKitchen } from './TodaysKitchen'
 
@@ -556,9 +555,10 @@ function AIGenerateModal({
   hasExistingPlan: boolean
   isGenerating: boolean
   onClose: () => void
-  onConfirm: (preferences?: string, targetDates?: string[]) => void
+  onConfirm: (preferences?: string, targetDates?: string[], usePantry?: boolean) => void
 }) {
   const [preferences, setPreferences] = useState('')
+  const [usePantry, setUsePantry] = useState(true)
 
   // Build the 7 ISO dates for the displayed week
   const weekDates = Array.from({ length: 7 }, (_, i) => {
@@ -668,6 +668,23 @@ function AIGenerateModal({
             </div>
           </div>
 
+          {/* Pantry toggle */}
+          <div className="ai-pantry-row">
+            <div className="ai-pantry-text">
+              <span className="ai-pantry-label">Use pantry ingredients</span>
+              <span className="ai-pantry-sub">AI will plan meals around what you already have at home</span>
+            </div>
+            <label className="ai-toggle">
+              <input
+                type="checkbox"
+                checked={usePantry}
+                onChange={(e) => setUsePantry(e.target.checked)}
+                disabled={isGenerating}
+              />
+              <span className="ai-toggle-slider" />
+            </label>
+          </div>
+
           {hasExistingPlan && (
             <div className="ai-warning">
               <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
@@ -688,7 +705,7 @@ function AIGenerateModal({
           {isGenerating && (
             <div className="ai-generating-status">
               <Loader2 size={14} className="ai-spin" />
-              Generating your {selectedCount}-day meal plan… this may take 15–30 seconds
+              Planning your {selectedCount}-day menu… this takes about 15 seconds
             </div>
           )}
         </div>
@@ -697,12 +714,139 @@ function AIGenerateModal({
           <button className="modal-cancel-btn" onClick={onClose} disabled={isGenerating}>Cancel</button>
           <button
             className="ai-confirm-btn"
-            onClick={() => onConfirm(preferences.trim() || undefined, Array.from(selectedDates))}
+            onClick={() => onConfirm(preferences.trim() || undefined, Array.from(selectedDates), usePantry)}
             disabled={isGenerating}
           >
             {isGenerating ? <Loader2 size={14} className="ai-spin" /> : <Sparkles size={14} />}
-            {isGenerating ? 'Generating…' : `Generate ${selectedCount} day${selectedCount !== 1 ? 's' : ''}`}
+            {isGenerating ? 'Planning…' : `Generate ${selectedCount} day${selectedCount !== 1 ? 's' : ''}`}
           </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ── Recipe detail modal ───────────────────────────────────
+
+function RecipeDetailModal({
+  recipeId,
+  onClose,
+}: {
+  recipeId: string
+  onClose: () => void
+}) {
+  const { data: recipe, isLoading } = useQuery({
+    queryKey: ['recipe-detail', recipeId],
+    queryFn: () => recipeApi.getRecipeById(recipeId),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  return (
+    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <motion.div
+        className="recipe-detail-modal"
+        initial={{ opacity: 0, scale: 0.96, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ duration: 0.2 }}
+      >
+        {/* Header */}
+        <div className="modal-header">
+          <div>
+            <h3>{isLoading ? 'Loading recipe…' : (recipe?.title ?? 'Recipe')}</h3>
+            {!isLoading && recipe?.cuisine && <p>{recipe.cuisine}</p>}
+          </div>
+          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        {isLoading ? (
+          <div className="recipe-detail-loading">
+            <Loader2 size={24} className="spin-icon" />
+          </div>
+        ) : recipe ? (
+          <div className="recipe-detail-body">
+            {recipe.description && (
+              <p className="recipe-detail-desc">{recipe.description}</p>
+            )}
+
+            {/* Meta chips */}
+            <div className="recipe-detail-meta">
+              {recipe.prepTimeMinutes != null && (
+                <span><Clock size={12} /> Prep {recipe.prepTimeMinutes}m</span>
+              )}
+              {recipe.cookTimeMinutes != null && (
+                <span><Flame size={12} /> Cook {recipe.cookTimeMinutes}m</span>
+              )}
+              {recipe.servings != null && (
+                <span><Users size={12} /> Serves {recipe.servings}</span>
+              )}
+            </div>
+
+            {/* Macro pills */}
+            {(recipe.calories || recipe.protein || recipe.carbs || recipe.fat) && (
+              <div className="recipe-detail-macros">
+                {recipe.calories != null && (
+                  <div className="rdm-pill rdm-pill--coral">
+                    <span>{recipe.calories}</span><small>kcal</small>
+                  </div>
+                )}
+                {recipe.protein != null && (
+                  <div className="rdm-pill rdm-pill--teal">
+                    <span>{recipe.protein}g</span><small>protein</small>
+                  </div>
+                )}
+                {recipe.carbs != null && (
+                  <div className="rdm-pill rdm-pill--amber">
+                    <span>{recipe.carbs}g</span><small>carbs</small>
+                  </div>
+                )}
+                {recipe.fat != null && (
+                  <div className="rdm-pill rdm-pill--blue">
+                    <span>{recipe.fat}g</span><small>fat</small>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Ingredients */}
+            {recipe.ingredients.length > 0 && (
+              <div className="recipe-detail-section">
+                <div className="recipe-detail-section-title">Ingredients</div>
+                <ul className="recipe-detail-ings">
+                  {recipe.ingredients.map((ing) => (
+                    <li key={ing.id}>
+                      <span className="rdi-dot" />
+                      <span className="rdi-name">{ing.ingredientName}</span>
+                      {(ing.quantity != null || ing.unit) && (
+                        <span className="rdi-qty">
+                          {[ing.quantity, ing.unit].filter(Boolean).join(' ')}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Steps */}
+            {recipe.steps.length > 0 && (
+              <div className="recipe-detail-section">
+                <div className="recipe-detail-section-title">Method</div>
+                <ol className="recipe-detail-steps">
+                  {recipe.steps.map((step) => (
+                    <li key={step.id}>
+                      <span className="rds-num">{step.stepNumber}</span>
+                      <span>{step.instructionText}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        <div className="modal-footer">
+          <button className="modal-cancel-btn" onClick={onClose}>Close</button>
         </div>
       </motion.div>
     </div>
@@ -783,12 +927,27 @@ function MealCard({
   onDelete,
   onEdit,
   onClick,
+  isPending,
 }: {
   item: MealPlanItem
   onDelete: () => void
   onEdit: () => void
   onClick: () => void
+  isPending: boolean
 }) {
+  // Shimmer state while recipe is being generated for this slot
+  if (isPending) {
+    return (
+      <div className="meal-card meal-card--pending">
+        <div className="meal-card-shimmer-line" />
+        <div className="meal-card-shimmer-line meal-card-shimmer-line--short" />
+        <span className="meal-card-generating-label">
+          <Loader2 size={9} className="spin-icon" /> Generating recipe…
+        </span>
+      </div>
+    )
+  }
+
   const title = item.recipe?.title ?? item.customMealName ?? 'Meal'
   const cals = item.recipe?.calories
 
@@ -839,7 +998,6 @@ interface SlotTarget { dayIndex: number; date: string; mealType: MealType; mealL
 
 export default function WeeklyPlannerPage() {
   const queryClient = useQueryClient()
-  const router = useRouter()
 
   const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()))
   const [addTarget, setAddTarget] = useState<SlotTarget | null>(null)
@@ -847,6 +1005,12 @@ export default function WeeklyPlannerPage() {
   const [deleteTarget, setDeleteTarget] = useState<MealPlanItem | null>(null)
   const [showAI, setShowAI] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'error' } | null>(null)
+  // IDs of meal plan items whose recipes are currently being generated
+  const [pendingItemIds, setPendingItemIds] = useState<Set<string>>(new Set())
+  // Progress counter for the generation banner
+  const [genProgress, setGenProgress] = useState<{ done: number; total: number } | null>(null)
+  // Recipe to show in the detail modal
+  const [viewingRecipeId, setViewingRecipeId] = useState<string | null>(null)
 
   const weekStartISO = toISO(weekStart)
   const todayISO = toISO(new Date())
@@ -913,14 +1077,51 @@ export default function WeeklyPlannerPage() {
     onError: () => showToast('Failed to update meal', 'error'),
   })
 
-  // AI generate
+  // AI generate — Phase 1: plan structure, Phase 2: sequential recipe generation
   const { mutate: generateAI, isPending: isGenerating } = useMutation({
-    mutationFn: ({ preferences, targetDates }: { preferences?: string; targetDates?: string[] }) =>
-      mealPlanApi.generateAIMealPlan(weekStartISO, preferences, targetDates),
-    onSuccess: () => {
+    mutationFn: ({ preferences, targetDates, usePantry }: { preferences?: string; targetDates?: string[]; usePantry?: boolean }) =>
+      mealPlanApi.generateAIMealPlan(weekStartISO, preferences, targetDates, usePantry),
+    onSuccess: async (data) => {
       setShowAI(false)
       invalidate()
-      showToast('AI meal plan generated!')
+
+      const itemIds = data.newItemIds
+      if (itemIds.length === 0) {
+        showToast('Meal plan generated!')
+        return
+      }
+
+      // Phase 2: generate full recipes one by one
+      showToast(`Meal plan ready — generating ${itemIds.length} recipes…`)
+      setPendingItemIds(new Set(itemIds))
+      setGenProgress({ done: 0, total: itemIds.length })
+
+      let completed = 0
+      for (const id of itemIds) {
+        try {
+          await mealPlanApi.generateSlotRecipe(id)
+          completed++
+        } catch {
+          // swallow individual failures — continue with remaining slots
+        }
+        setPendingItemIds(prev => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
+        setGenProgress({ done: completed, total: itemIds.length })
+        // Refresh the planner view after each recipe is ready
+        queryClient.invalidateQueries({ queryKey: ['meal-plan-week', weekStartISO] })
+      }
+
+      setPendingItemIds(new Set())
+      setGenProgress(null)
+      showToast(
+        completed === itemIds.length
+          ? 'All recipes ready!'
+          : `Done — ${completed} of ${itemIds.length} recipes generated`,
+        completed === itemIds.length ? 'ok' : 'error'
+      )
     },
     onError: () => {
       setShowAI(false)
@@ -976,6 +1177,28 @@ export default function WeeklyPlannerPage() {
         </div>
       </motion.div>
 
+      {/* ── Recipe generation progress banner ── */}
+      <AnimatePresence>
+        {genProgress && (
+          <motion.div
+            className="gen-progress-banner"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Loader2 size={14} className="spin-icon" style={{ flexShrink: 0 }} />
+            <span>Generating recipes… ({genProgress.done}/{genProgress.total})</span>
+            <div className="gen-progress-track">
+              <div
+                className="gen-progress-fill"
+                style={{ width: `${(genProgress.done / genProgress.total) * 100}%` }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Grid ── */}
       {isLoading ? (
         <div className="planner-loading">
@@ -1030,7 +1253,11 @@ export default function WeeklyPlannerPage() {
                           item={item}
                           onDelete={() => setDeleteTarget(item)}
                           onEdit={() => setEditTarget(item)}
-                          onClick={() => item.recipe && router.push(`/recipes/${item.recipe.id}`)}
+                          onClick={() => {
+                            if (item.recipe) setViewingRecipeId(item.recipe.id)
+                            else if (!pendingItemIds.has(item.id)) setEditTarget(item)
+                          }}
+                          isPending={pendingItemIds.has(item.id)}
                         />
                       ) : (
                         <div className="meal-cell-empty">
@@ -1106,7 +1333,7 @@ export default function WeeklyPlannerPage() {
             hasExistingPlan={!!weekView?.mealPlan}
             isGenerating={isGenerating}
             onClose={() => !isGenerating && setShowAI(false)}
-            onConfirm={(prefs, targetDates) => generateAI({ preferences: prefs, targetDates })}
+            onConfirm={(prefs, targetDates, usePantry) => generateAI({ preferences: prefs, targetDates, usePantry })}
           />
         )}
       </AnimatePresence>
@@ -1138,6 +1365,16 @@ export default function WeeklyPlannerPage() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Recipe detail modal ── */}
+      <AnimatePresence>
+        {viewingRecipeId && (
+          <RecipeDetailModal
+            recipeId={viewingRecipeId}
+            onClose={() => setViewingRecipeId(null)}
+          />
         )}
       </AnimatePresence>
 
