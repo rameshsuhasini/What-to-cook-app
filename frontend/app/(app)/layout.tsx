@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from '@/components/Sidebar'
 import BottomNav from '@/components/BottomNav'
+import MobileHeader from '@/components/MobileHeader'
 import { useOnboardingGuard } from '@/hooks/useOnboardingGuard'
 import '../layout.css'
 
@@ -15,6 +16,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="app-layout">
       <Sidebar />
+      <MobileHeader />
       <main className="app-main">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
