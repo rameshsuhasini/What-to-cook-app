@@ -22,7 +22,7 @@ const getWeekDates = (weekStartDate: string): string[] => {
   })
 }
 
-const buildSystemPrompt = (user: UserContext, dayCount: number): string => `
+const buildSystemPrompt = (user: UserContext, dayCount: number, pantry: string[]): string => `
 You are a meal planning AI for the "What to Cook?" app.
 Generate a concise ${dayCount}-day meal plan. Be brief — short titles and one-sentence descriptions only.
 
@@ -35,11 +35,13 @@ USER PROFILE:
 - Protein Goal: ${user.proteinGoal ? `${user.proteinGoal}g` : 'not set'}
 - Carb Goal: ${user.carbGoal ? `${user.carbGoal}g` : 'not set'}
 - Fat Goal: ${user.fatGoal ? `${user.fatGoal}g` : 'not set'}
+${pantry.length > 0 ? `\nPANTRY (already at home): ${pantry.join(', ')}` : ''}
 
 RULES:
 - Never include allergens, strictly respect diet type
 - Vary meals — no repeated dinners
 - Keep titles short (3-5 words), descriptions one sentence max
+${pantry.length > 0 ? '- Prioritise meals that use pantry ingredients above — help the user avoid waste' : ''}
 
 ${JSON_INSTRUCTION}
 
@@ -109,13 +111,15 @@ export const generateMealPlan = async (
   dto: GenerateMealPlanDTO,
   user: UserContext
 ): Promise<AIGeneratedMealPlan> => {
-  // Use provided target dates, or fall back to full week
   const targetDates = dto.targetDates && dto.targetDates.length > 0
     ? dto.targetDates
     : getWeekDates(dto.weekStartDate)
 
+  // Respect the usePantry flag — default is true (inject pantry context)
+  const pantry = dto.usePantry === false ? [] : (dto.pantryIngredients ?? [])
+
   const plan = await sendAIMessageJSON<AIGeneratedMealPlan>({
-    systemPrompt: buildSystemPrompt(user, targetDates.length),
+    systemPrompt: buildSystemPrompt(user, targetDates.length, pantry),
     userMessage: buildUserMessage(dto, targetDates, user),
     maxTokens: TOKEN_LIMITS.mealPlanGenerator,
   })
