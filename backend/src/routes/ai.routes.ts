@@ -118,6 +118,23 @@ router.post(
   aiController.generateStarterPack.bind(aiController)
 )
 
+// ── POST /api/ai/generate-slot-recipe ────
+// Generates a full recipe for a single meal plan item.
+// Called sequentially by the frontend (one per meal slot).
+// More generous rate limit since it's triggered automatically.
+router.post(
+  '/generate-slot-recipe',
+  authenticate,
+  createRateLimiter(30, 10 * 60 * 1000),
+  [
+    body('mealPlanItemId')
+      .notEmpty().withMessage('mealPlanItemId is required')
+      .isString().withMessage('mealPlanItemId must be a string'),
+  ],
+  validate,
+  aiController.generateSlotRecipe.bind(aiController)
+)
+
 // ── POST /api/ai/pantry-suggestions ──────
 router.post(
   '/pantry-suggestions',
