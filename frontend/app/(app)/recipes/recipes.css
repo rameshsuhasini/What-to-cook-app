@@ -53,27 +53,59 @@
   flex-wrap: wrap;
 }
 
-/* ── Pantry button ───────────────────── */
-.pantry-btn {
+/* ── Icon-only action buttons (pantry + import) ── */
+.icon-action-btn {
+  position: relative;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   background: white;
-  color: var(--teal-600);
-  border: 1.5px solid var(--teal-400);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--sand-200);
   border-radius: var(--radius-md);
-  padding: 0.7rem 1.2rem;
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 600;
   cursor: pointer;
   transition: all 200ms var(--ease);
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.pantry-btn:hover {
+.icon-action-btn:hover {
+  border-color: var(--teal-400);
+  color: var(--teal-600);
   background: var(--teal-50);
   transform: translateY(-1px);
+}
+
+.icon-action-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-primary);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms var(--ease);
+}
+
+.icon-action-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--text-primary);
+}
+
+.icon-action-btn:hover .icon-action-tooltip {
+  opacity: 1;
 }
 
 /* ── Generate button ─────────────────── */
@@ -756,6 +788,63 @@
   color: var(--coral-400);
   font-weight: 500;
   padding: 0 1.5rem 0.5rem;
+}
+
+/* ── Import URL modal internals ──────── */
+.import-url-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.import-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 0.25rem;
+}
+
+.import-source-chip {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--sand-100);
+  border: 1px solid var(--sand-200);
+  color: var(--text-secondary);
+}
+
+.import-source-chip--active {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.3);
+  color: #5b21b6;
+}
+
+.import-disclaimer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: var(--sand-50);
+  border: 1px solid var(--sand-200);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 0.25rem;
+}
+
+.import-loading-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  background: rgba(124, 58, 237, 0.05);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 0.25rem;
 }
 
 /* ── Pantry suggestions modal ────────── */
