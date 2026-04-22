@@ -19,6 +19,7 @@ import recipeRepository from '../repositories/recipe.repository'
 import mealPlanRepository from '../repositories/meal-plan.repository'
 import healthRepository from '../repositories/health.repository'
 import pantryRepository from '../repositories/pantry.repository'
+import { fetchFoodImage } from '../lib/fetchFoodImage'
 
 export class AIController {
   /**
@@ -79,8 +80,12 @@ export class AIController {
         userContext
       )
 
-      // Save to DB as an AI-generated recipe
-      const saved = await recipeRepository.create(aiRecipe, userId, true)
+      const imageUrl = await fetchFoodImage(aiRecipe.title)
+      const saved = await recipeRepository.create(
+        { ...aiRecipe, imageUrl: imageUrl ?? undefined },
+        userId,
+        true
+      )
 
       res.status(201).json({
         success: true,
@@ -324,7 +329,12 @@ export class AIController {
         userContext
       )
 
-      const savedRecipe = await recipeRepository.create(aiRecipe, userId, true)
+      const slotImageUrl = await fetchFoodImage(aiRecipe.title)
+      const savedRecipe = await recipeRepository.create(
+        { ...aiRecipe, imageUrl: slotImageUrl ?? undefined },
+        userId,
+        true
+      )
 
       await mealPlanRepository.updateItem(item.id, { recipeId: savedRecipe.id })
 
