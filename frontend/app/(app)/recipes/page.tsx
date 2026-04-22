@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Sparkles, X, Heart, Clock, Flame, Loader2,
-  ChefHat, UtensilsCrossed, Users, Apple, CalendarPlus, Link,
+  ChefHat, UtensilsCrossed, Users, Refrigerator, CalendarPlus, Link,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { recipeApi, Recipe, DietType, MealType } from '@/services/recipe.service'
@@ -503,13 +503,13 @@ export default function RecipesPage() {
           <p>Discover dishes, or let AI create something perfect for you.</p>
         </div>
         <div className="recipes-header-actions">
-          <button className="pantry-btn" onClick={() => setShowPantryModal(true)}>
-            <Apple size={16} />
-            What can I cook?
+          <button className="icon-action-btn" onClick={() => setShowPantryModal(true)} aria-label="Cook from my pantry">
+            <Refrigerator size={18} />
+            <span className="icon-action-tooltip">Cook from my pantry</span>
           </button>
-          <button className="import-url-btn" onClick={() => setShowImportModal(true)}>
-            <Link size={16} />
-            Import from URL
+          <button className="icon-action-btn" onClick={() => setShowImportModal(true)} aria-label="Import from URL">
+            <Link size={18} />
+            <span className="icon-action-tooltip">Import from URL</span>
           </button>
           <button className="generate-btn" onClick={() => setShowGenerateModal(true)}>
             <Sparkles size={16} />
