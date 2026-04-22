@@ -174,4 +174,9 @@ export const recipeApi = {
     const res = await api.post('/ai/generate-recipe', payload)
     return res.data.data.recipe
   },
+
+  importFromUrl: async (url: string): Promise<Recipe> => {
+    const res = await api.post('/recipes/import-url', { url }, { timeout: 60_000 })
+    return res.data.data.recipe
+  },
 }

@@ -76,6 +76,30 @@
   transform: translateY(-1px);
 }
 
+/* ── Import URL button ───────────────── */
+.import-url-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  color: var(--text-primary);
+  border: 1.5px solid var(--sand-300);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1.2rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms var(--ease);
+  white-space: nowrap;
+}
+
+.import-url-btn:hover {
+  border-color: var(--teal-400);
+  color: var(--teal-600);
+  transform: translateY(-1px);
+}
+
 /* ── Generate button ─────────────────── */
 .generate-btn {
   display: flex;
@@ -756,6 +780,63 @@
   color: var(--coral-400);
   font-weight: 500;
   padding: 0 1.5rem 0.5rem;
+}
+
+/* ── Import URL modal internals ──────── */
+.import-url-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.import-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 0.25rem;
+}
+
+.import-source-chip {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--sand-100);
+  border: 1px solid var(--sand-200);
+  color: var(--text-secondary);
+}
+
+.import-source-chip--active {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.3);
+  color: #5b21b6;
+}
+
+.import-disclaimer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: var(--sand-50);
+  border: 1px solid var(--sand-200);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 0.25rem;
+}
+
+.import-loading-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  background: rgba(124, 58, 237, 0.05);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 0.25rem;
 }
 
 /* ── Pantry suggestions modal ────────── */
