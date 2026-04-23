@@ -508,6 +508,18 @@
   overflow-y: auto;
 }
 
+/* ── Notification bell (top-right corner, desktop only) ── */
+.app-topbar-actions {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  z-index: 200;
+}
+
+@media (max-width: 900px) {
+  .app-topbar-actions { display: none; }
+}
+
 /* ── Mobile header (hidden on desktop/tablet) ── */
 .mobile-header { display: none; }
 
@@ -588,6 +600,9 @@
 
 .mobile-header-right {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .mobile-header-user {

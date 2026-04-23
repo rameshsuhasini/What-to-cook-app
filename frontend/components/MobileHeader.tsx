@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
 import { authApi } from '@/services/auth.service'
 import { profileApi } from '@/services/profile.service'
+import NotificationBell from './NotificationBell'
 
 export default function MobileHeader() {
   const router = useRouter()
@@ -58,8 +59,9 @@ export default function MobileHeader() {
         <span className="mobile-header-appname">What to Cook?</span>
       </Link>
 
-      {/* ── Right: avatar + name + menu ── */}
+      {/* ── Right: bell + avatar + menu ── */}
       <div className="mobile-header-right" ref={menuRef}>
+        <NotificationBell />
         <button
           className="mobile-header-user"
           onClick={() => setOpen((v) => !v)}
