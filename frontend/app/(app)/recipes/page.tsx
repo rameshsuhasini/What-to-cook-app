@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Sparkles, X, Heart, Clock, Flame, Loader2,
-  ChefHat, UtensilsCrossed, Users, Apple, CalendarPlus,
+  ChefHat, UtensilsCrossed, Users, Refrigerator, CalendarPlus, Link,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { recipeApi, Recipe, DietType, MealType } from '@/services/recipe.service'
@@ -186,6 +186,93 @@ function GenerateModal({
   )
 }
 
+// ── Import from URL modal ─────────────────────────────────
+
+function ImportRecipeModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (recipe: Recipe) => void }) {
+  const [url, setUrl] = useState('')
+  const [error, setError] = useState('')
+
+  const { mutate: importRecipe, isPending } = useMutation({
+    mutationFn: () => recipeApi.importFromUrl(url.trim()),
+    onSuccess: (recipe) => onSuccess(recipe),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setError(msg ?? 'Failed to import recipe. Please try a different URL.')
+    },
+  })
+
+  const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+
+  return (
+    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <motion.div
+        className="generate-modal"
+        initial={{ opacity: 0, scale: 0.96, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 16 }}
+        transition={{ duration: 0.22 }}
+      >
+        <div className="modal-header">
+          <div className="modal-title">
+            <div className="ai-icon"><Link size={16} /></div>
+            <h2>Import Recipe from URL</h2>
+          </div>
+          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div className="modal-body">
+          <div className="modal-field">
+            <label>Recipe URL *</label>
+            <input
+              type="url"
+              placeholder="https://youtube.com/watch?v=… or any recipe page"
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); setError('') }}
+              disabled={isPending}
+              autoFocus
+            />
+            <p className="import-url-hint">
+              Paste a YouTube video link or any public recipe page URL.
+              Instagram and paywalled sites are not supported.
+            </p>
+          </div>
+
+          <div className="import-sources">
+            <span className={`import-source-chip ${isYouTube ? 'import-source-chip--active' : ''}`}>YouTube</span>
+            <span className="import-source-chip">AllRecipes</span>
+            <span className="import-source-chip">BBC Food</span>
+            <span className="import-source-chip">Tasty</span>
+            <span className="import-source-chip">+ most recipe sites</span>
+          </div>
+
+          <div className="import-disclaimer">
+            <Sparkles size={12} />
+            Nutritional values are AI-estimated when not explicitly stated on the source page.
+          </div>
+
+          {isPending && (
+            <div className="import-loading-status">
+              <Loader2 size={14} className="spin-icon" />
+              {isYouTube ? 'Fetching video transcript and extracting recipe…' : 'Fetching page and extracting recipe…'}
+              &nbsp;This may take up to 20 seconds.
+            </div>
+          )}
+        </div>
+
+        {error && <p className="modal-error">{error}</p>}
+
+        <div className="modal-footer">
+          <button className="modal-cancel-btn" onClick={onClose} disabled={isPending}>Cancel</button>
+          <button className="modal-generate-btn" onClick={() => importRecipe()} disabled={isPending || !url.trim()}>
+            {isPending ? <Loader2 size={15} className="spin-icon" /> : <Link size={15} />}
+            {isPending ? 'Importing…' : 'Import Recipe'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 // ── Recipe card ───────────────────────────────────────────
 
 function RecipeCard({
@@ -314,6 +401,7 @@ export default function RecipesPage() {
   const [cuisine, setCuisine] = useState('')
   const [page, setPage] = useState(1)
   const [showGenerateModal, setShowGenerateModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const [showPantryModal, setShowPantryModal] = useState(false)
   const [planRecipe, setPlanRecipe] = useState<{ id: string; title: string } | null>(null)
 
@@ -389,6 +477,12 @@ export default function RecipesPage() {
     router.push(`/recipes/${recipe.id}`)
   }
 
+  const handleImportSuccess = (recipe: Recipe) => {
+    setShowImportModal(false)
+    queryClient.invalidateQueries({ queryKey: ['recipes'] })
+    router.push(`/recipes/${recipe.id}`)
+  }
+
   // Decide what to render
   const recipes = tab === 'all' ? data?.recipes ?? [] : savedData ?? []
   const pagination = tab === 'all' ? data?.pagination : null
@@ -409,9 +503,13 @@ export default function RecipesPage() {
           <p>Discover dishes, or let AI create something perfect for you.</p>
         </div>
         <div className="recipes-header-actions">
-          <button className="pantry-btn" onClick={() => setShowPantryModal(true)}>
-            <Apple size={16} />
-            What can I cook?
+          <button className="icon-action-btn" onClick={() => setShowPantryModal(true)} aria-label="Cook from my pantry">
+            <Refrigerator size={18} />
+            <span className="icon-action-tooltip">Cook from my pantry</span>
+          </button>
+          <button className="icon-action-btn" onClick={() => setShowImportModal(true)} aria-label="Import from URL">
+            <Link size={18} />
+            <span className="icon-action-tooltip">Import from URL</span>
           </button>
           <button className="generate-btn" onClick={() => setShowGenerateModal(true)}>
             <Sparkles size={16} />
@@ -599,6 +697,16 @@ export default function RecipesPage() {
           <GenerateModal
             onClose={() => setShowGenerateModal(false)}
             onSuccess={handleGenerateSuccess}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Import from URL Modal ── */}
+      <AnimatePresence>
+        {showImportModal && (
+          <ImportRecipeModal
+            onClose={() => setShowImportModal(false)}
+            onSuccess={handleImportSuccess}
           />
         )}
       </AnimatePresence>

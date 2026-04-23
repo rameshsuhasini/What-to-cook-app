@@ -11,6 +11,7 @@
 
 import { Request, Response, NextFunction } from 'express'
 import pantryService from '../services/pantry.service'
+import { achievementService } from '../services/achievement.service'
 
 export class PantryController {
   /**
@@ -51,6 +52,7 @@ export class PantryController {
     try {
       const userId = req.user!.userId
       const item = await pantryService.addPantryItem(userId, req.body)
+      achievementService.onPantryItemAdded(userId).catch(() => {})
 
       res.status(201).json({ success: true, data: { item } })
     } catch (error) {

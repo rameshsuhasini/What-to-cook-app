@@ -9,13 +9,34 @@
 // treating "saved" as a route param.
 // ─────────────────────────────────────────
 
-import { Router } from 'express'
+import { Router, Request, Response, NextFunction } from 'express'
 import { body, param, query } from 'express-validator'
 import recipeController from '../controllers/recipe.controller'
+import recipeImportController from '../controllers/recipeImport.controller'
 import { authenticate, optionalAuthenticate} from '../middleware/auth.middleware'
 import { validate } from '../middleware/validate.middleware'
 
 const router = Router()
+
+// ── Rate limiter for import endpoint (10 per 10 min per user) ──
+const importRateLimitStore = new Map<string, { count: number; resetAt: number }>()
+const importRateLimit = (req: Request, res: Response, next: NextFunction): void => {
+  const userId = req.user?.userId
+  if (!userId) { next(); return }
+  const now = Date.now()
+  const windowMs = 10 * 60 * 1000
+  const entry = importRateLimitStore.get(userId)
+  if (!entry || now > entry.resetAt) {
+    importRateLimitStore.set(userId, { count: 1, resetAt: now + windowMs })
+    next(); return
+  }
+  if (entry.count >= 10) {
+    res.status(429).json({ success: false, message: 'Too many import requests. Please wait a few minutes.' })
+    return
+  }
+  entry.count++
+  next()
+}
 
 // ── Ingredient validation (reused in create + update) ──
 const ingredientValidation = body('ingredients')
@@ -73,6 +94,22 @@ router.get(
   ],
   validate,
   recipeController.getRecipes.bind(recipeController)
+)
+
+// ── POST /api/recipes/import-url ─────────
+// Must be before /:id — "import-url" would be treated as an :id param otherwise
+router.post(
+  '/import-url',
+  authenticate,
+  importRateLimit,
+  [
+    body('url')
+      .trim()
+      .notEmpty().withMessage('URL is required')
+      .isURL({ require_protocol: true }).withMessage('Please provide a valid URL including http:// or https://'),
+  ],
+  validate,
+  recipeImportController.importFromUrl.bind(recipeImportController)
 )
 
 // ── GET /api/recipes/saved ───────────────

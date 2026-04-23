@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from '@/components/Sidebar'
 import BottomNav from '@/components/BottomNav'
 import MobileHeader from '@/components/MobileHeader'
+import NotificationBell from '@/components/NotificationBell'
+import AchievementToast from '@/components/AchievementToast'
 import { useOnboardingGuard } from '@/hooks/useOnboardingGuard'
 import '../layout.css'
 
@@ -17,6 +19,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className="app-layout">
       <Sidebar />
       <MobileHeader />
+      <div className="app-topbar-actions">
+        <NotificationBell />
+      </div>
       <main className="app-main">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -32,6 +37,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </AnimatePresence>
       </main>
       <BottomNav />
+      <AchievementToast />
     </div>
   )
 }

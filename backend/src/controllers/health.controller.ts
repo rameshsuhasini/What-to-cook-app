@@ -11,6 +11,8 @@
 
 import { Request, Response, NextFunction } from 'express'
 import healthService from '../services/health.service'
+import { achievementService } from '../services/achievement.service'
+import prisma from '../lib/prisma'
 
 export class HealthController {
   // ── Weight Logs ──────────────────────────
@@ -53,6 +55,9 @@ export class HealthController {
     try {
       const userId = req.user!.userId
       const log = await healthService.logWeight(userId, req.body)
+
+      const totalLogs = await prisma.weightLog.count({ where: { userId } })
+      achievementService.onWeightLogged(userId, totalLogs).catch(() => {})
 
       res.status(201).json({ success: true, data: { log } })
     } catch (error) {
@@ -123,6 +128,9 @@ export class HealthController {
     try {
       const userId = req.user!.userId
       const log = await healthService.logNutrition(userId, req.body)
+
+      const totalLogs = await prisma.nutritionLog.count({ where: { userId } })
+      achievementService.onNutritionLogged(userId, totalLogs).catch(() => {})
 
       res.status(201).json({ success: true, data: { log } })
     } catch (error) {
