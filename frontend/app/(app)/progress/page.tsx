@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   Minus, Scale,
@@ -97,29 +97,33 @@ function NutritionTooltip({ active, payload, label }: any) {
   )
 }
 
+// ── Deep-link handler (isolated for Suspense) ────────────────────────────────
+function DeepLinkHandler({
+  onWeightLog,
+  onNutritionLog,
+}: {
+  onWeightLog: () => void
+  onNutritionLog: () => void
+}) {
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const open = searchParams.get('open')
+    if (open === 'weight-log') onWeightLog()
+    else if (open === 'nutrition-log') onNutritionLog()
+  }, [searchParams, onWeightLog, onNutritionLog])
+  return null
+}
+
 // ── Page ─────────────────────────────────
 
-export default function ProgressPage() {
+function ProgressPageInner() {
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
-  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<'weight' | 'nutrition'>('weight')
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [showNutritionModal, setShowNutritionModal] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [weightRange, setWeightRange] = useState<7 | 30 | 90>(30)
-
-  // Auto-open modal from notification redirect (?open=weight-log or ?open=nutrition-log)
-  useEffect(() => {
-    const open = searchParams.get('open')
-    if (open === 'weight-log') {
-      setShowWeightModal(true)
-      setActiveTab('weight')
-    } else if (open === 'nutrition-log') {
-      setShowNutritionModal(true)
-      setActiveTab('nutrition')
-    }
-  }, [searchParams])
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -709,7 +713,23 @@ export default function ProgressPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* ── Deep-link handler (Suspense boundary inside) ── */}
+      <Suspense fallback={null}>
+        <DeepLinkHandler
+          onWeightLog={() => { setShowWeightModal(true); setActiveTab('weight') }}
+          onNutritionLog={() => { setShowNutritionModal(true); setActiveTab('nutrition') }}
+        />
+      </Suspense>
     </div>
+  )
+}
+
+export default function ProgressPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProgressPageInner />
+    </Suspense>
   )
 }
 
