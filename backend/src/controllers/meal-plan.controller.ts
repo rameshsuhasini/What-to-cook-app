@@ -11,6 +11,8 @@
 
 import { Request, Response, NextFunction } from 'express'
 import mealPlanService from '../services/meal-plan.service'
+import { achievementService } from '../services/achievement.service'
+import prisma from '../lib/prisma'
 
 export class MealPlanController {
   /**
@@ -40,6 +42,9 @@ export class MealPlanController {
     try {
       const userId = req.user!.userId
       const mealPlan = await mealPlanService.createMealPlan(userId, req.body)
+
+      const totalPlans = await prisma.mealPlan.count({ where: { userId } })
+      achievementService.onMealPlanCreated(userId, totalPlans).catch(() => {})
 
       res.status(201).json({ success: true, data: { mealPlan } })
     } catch (error) {

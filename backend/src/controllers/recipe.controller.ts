@@ -12,6 +12,8 @@
 import { Request, Response, NextFunction } from 'express'
 import recipeService from '../services/recipe.service'
 import { DietType, MealType } from '@prisma/client'
+import { achievementService } from '../services/achievement.service'
+import prisma from '../lib/prisma'
 
 export class RecipeController {
   /**
@@ -167,6 +169,9 @@ export class RecipeController {
       const userId = req.user!.userId
       const recipeId = req.body.recipeId as string
       await recipeService.saveRecipe(recipeId, userId)
+
+      const totalSaved = await prisma.savedRecipe.count({ where: { userId } })
+      achievementService.onRecipeSaved(userId, totalSaved).catch(() => {})
 
       res.status(200).json({
         success: true,

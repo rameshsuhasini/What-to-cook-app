@@ -19,6 +19,7 @@ import recipeRepository from '../repositories/recipe.repository'
 import mealPlanRepository from '../repositories/meal-plan.repository'
 import healthRepository from '../repositories/health.repository'
 import pantryRepository from '../repositories/pantry.repository'
+import { achievementService } from '../services/achievement.service'
 
 export class AIController {
   /**
@@ -81,6 +82,7 @@ export class AIController {
 
       // Save to DB as an AI-generated recipe
       const saved = await recipeRepository.create(aiRecipe, userId, true)
+      achievementService.onAiRecipeGenerated(userId).catch(() => {})
 
       res.status(201).json({
         success: true,
