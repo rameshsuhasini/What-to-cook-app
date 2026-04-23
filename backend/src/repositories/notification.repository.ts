@@ -16,9 +16,9 @@ const notificationRepository = {
     })
   },
 
-  async create(userId: string, type: NotificationType, title: string, message: string) {
+  async create(userId: string, type: NotificationType, title: string, message: string, href?: string) {
     return prisma.notification.create({
-      data: { userId, type, title, message },
+      data: { userId, type, title, message, href },
     })
   },
 

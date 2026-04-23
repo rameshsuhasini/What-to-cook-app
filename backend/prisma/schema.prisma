@@ -384,6 +384,7 @@ model Notification {
   type      NotificationType
   title     String
   message   String
+  href      String?
   isRead    Boolean          @default(false) @map("is_read")
   createdAt DateTime         @default(now()) @map("created_at")
 
