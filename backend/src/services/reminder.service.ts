@@ -38,7 +38,8 @@ async function checkWeightReminder(userId: string): Promise<void> {
     'Log your weight',
     latest
       ? `It's been ${daysSince} days since your last weight entry. Stay on track! ⚖️`
-      : "You haven't logged your weight yet. Start tracking your progress! ⚖️"
+      : "You haven't logged your weight yet. Start tracking your progress! ⚖️",
+    '/progress?open=weight-log'
   )
 }
 
@@ -65,7 +66,8 @@ async function checkNutritionReminder(userId: string): Promise<void> {
     userId,
     'REMINDER',
     "Log today's nutrition",
-    "You haven't logged your meals today. Keep your streak alive! 🥗"
+    "You haven't logged your meals today. Keep your streak alive! 🥗",
+    '/progress?open=nutrition-log'
   )
 }
 
