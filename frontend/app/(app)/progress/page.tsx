@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Minus, Scale,
   Flame, X, Check, RefreshCw, Calendar,
@@ -96,9 +97,26 @@ function NutritionTooltip({ active, payload, label }: any) {
   )
 }
 
+// ── Deep-link handler (isolated for Suspense) ────────────────────────────────
+function DeepLinkHandler({
+  onWeightLog,
+  onNutritionLog,
+}: {
+  onWeightLog: () => void
+  onNutritionLog: () => void
+}) {
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const open = searchParams.get('open')
+    if (open === 'weight-log') onWeightLog()
+    else if (open === 'nutrition-log') onNutritionLog()
+  }, [searchParams, onWeightLog, onNutritionLog])
+  return null
+}
+
 // ── Page ─────────────────────────────────
 
-export default function ProgressPage() {
+function ProgressPageInner() {
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'weight' | 'nutrition'>('weight')
@@ -137,8 +155,8 @@ export default function ProgressPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weight-logs-full'] })
       queryClient.invalidateQueries({ queryKey: ['weight-logs'] })
-      showToast('Weight logged!')
-      setShowWeightModal(false)
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      // Modal handles its own success state and closes after 800ms
     },
     onError: (err: Error) => showToast(err.message || 'Failed to log weight', 'error'),
   })
@@ -150,8 +168,8 @@ export default function ProgressPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nutrition-logs-full'] })
       queryClient.invalidateQueries({ queryKey: ['nutrition-today'] })
-      showToast('Nutrition logged!')
-      setShowNutritionModal(false)
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      // Modal handles its own success state and closes after 800ms
     },
     onError: (err: Error) => showToast(err.message || 'Failed to log nutrition', 'error'),
   })
@@ -673,9 +691,11 @@ export default function ProgressPage() {
         {showWeightModal && (
           <LogWeightModal
             isLoading={addWeightMutation.isPending}
+            isSuccess={addWeightMutation.isSuccess}
             initialWeight={showWeightPrompt ? profileWeight?.toString() : undefined}
-            onClose={() => setShowWeightModal(false)}
+            onClose={() => { setShowWeightModal(false); addWeightMutation.reset() }}
             onSubmit={(payload) => addWeightMutation.mutate(payload)}
+            onSuccessDone={() => { setShowWeightModal(false); addWeightMutation.reset() }}
           />
         )}
       </AnimatePresence>
@@ -685,13 +705,31 @@ export default function ProgressPage() {
         {showNutritionModal && (
           <LogNutritionModal
             isLoading={addNutritionMutation.isPending}
+            isSuccess={addNutritionMutation.isSuccess}
             goals={{ calories: calorieGoal, protein: proteinGoal, carbs: carbGoal, fat: fatGoal }}
-            onClose={() => setShowNutritionModal(false)}
+            onClose={() => { setShowNutritionModal(false); addNutritionMutation.reset() }}
             onSubmit={(payload) => addNutritionMutation.mutate(payload)}
+            onSuccessDone={() => { setShowNutritionModal(false); addNutritionMutation.reset() }}
           />
         )}
       </AnimatePresence>
+
+      {/* ── Deep-link handler (Suspense boundary inside) ── */}
+      <Suspense fallback={null}>
+        <DeepLinkHandler
+          onWeightLog={() => { setShowWeightModal(true); setActiveTab('weight') }}
+          onNutritionLog={() => { setShowNutritionModal(true); setActiveTab('nutrition') }}
+        />
+      </Suspense>
     </div>
+  )
+}
+
+export default function ProgressPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProgressPageInner />
+    </Suspense>
   )
 }
 
@@ -754,19 +792,30 @@ function MacroBar({
 
 function LogWeightModal({
   isLoading,
+  isSuccess,
   initialWeight,
   onClose,
   onSubmit,
+  onSuccessDone,
 }: {
   isLoading: boolean
+  isSuccess: boolean
   initialWeight?: string
   onClose: () => void
   onSubmit: (payload: { weightKg: number; logDate: string; notes?: string }) => void
+  onSuccessDone: () => void
 }) {
   const today = new Date().toISOString().split('T')[0]
   const [weight, setWeight] = useState(initialWeight ?? '')
   const [date, setDate] = useState(today)
   const [notes, setNotes] = useState('')
+
+  // Auto-close after showing success state
+  useEffect(() => {
+    if (!isSuccess) return
+    const t = setTimeout(onSuccessDone, 900)
+    return () => clearTimeout(t)
+  }, [isSuccess])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -800,6 +849,7 @@ function LogWeightModal({
               value={weight}
               onChange={e => setWeight(e.target.value)}
               autoFocus
+              disabled={isSuccess}
             />
           </label>
           <label className="pg-label">
@@ -810,6 +860,7 @@ function LogWeightModal({
               value={date}
               max={today}
               onChange={e => setDate(e.target.value)}
+              disabled={isSuccess}
             />
           </label>
           <label className="pg-label">
@@ -819,17 +870,18 @@ function LogWeightModal({
               placeholder="Optional note..."
               value={notes}
               onChange={e => setNotes(e.target.value)}
+              disabled={isSuccess}
             />
           </label>
           <div className="pg-modal-actions">
-            <button type="button" className="pg-btn pg-btn--ghost" onClick={onClose}>Cancel</button>
+            <button type="button" className="pg-btn pg-btn--ghost" onClick={onClose} disabled={isSuccess}>Cancel</button>
             <button
               type="submit"
-              className="pg-btn pg-btn--primary"
-              disabled={isLoading || !weight || !date}
+              className={`pg-btn ${isSuccess ? 'pg-btn--success' : 'pg-btn--primary'}`}
+              disabled={isLoading || isSuccess || !weight || !date}
             >
               {isLoading ? <RefreshCw size={14} className="pg-spin" /> : <Check size={14} />}
-              Save entry
+              {isSuccess ? 'Logged!' : 'Save entry'}
             </button>
           </div>
         </form>
@@ -842,17 +894,28 @@ function LogWeightModal({
 
 function LogNutritionModal({
   isLoading,
+  isSuccess,
   goals,
   onClose,
   onSubmit,
+  onSuccessDone,
 }: {
   isLoading: boolean
+  isSuccess: boolean
   goals: { calories: number; protein: number; carbs: number; fat: number }
   onClose: () => void
   onSubmit: (payload: { calories: number; protein: number; carbs: number; fat: number; date: string }) => void
+  onSuccessDone: () => void
 }) {
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState({ calories: '', protein: '', carbs: '', fat: '', date: today })
+
+  // Auto-close after showing success state
+  useEffect(() => {
+    if (!isSuccess) return
+    const t = setTimeout(onSuccessDone, 900)
+    return () => clearTimeout(t)
+  }, [isSuccess])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -896,6 +959,7 @@ function LogNutritionModal({
               value={form.date}
               max={today}
               onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+              disabled={isSuccess}
             />
           </label>
           <div className="pg-macros-grid">
@@ -912,6 +976,7 @@ function LogNutritionModal({
                     value={form[key]}
                     onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                     autoFocus={key === 'calories'}
+                    disabled={isSuccess}
                   />
                   <span className="pg-input-unit">{unit}</span>
                 </div>
@@ -919,14 +984,14 @@ function LogNutritionModal({
             ))}
           </div>
           <div className="pg-modal-actions">
-            <button type="button" className="pg-btn pg-btn--ghost" onClick={onClose}>Cancel</button>
+            <button type="button" className="pg-btn pg-btn--ghost" onClick={onClose} disabled={isSuccess}>Cancel</button>
             <button
               type="submit"
-              className="pg-btn pg-btn--primary"
-              disabled={isLoading || !form.calories}
+              className={`pg-btn ${isSuccess ? 'pg-btn--success' : 'pg-btn--primary'}`}
+              disabled={isLoading || isSuccess || !form.calories}
             >
               {isLoading ? <RefreshCw size={14} className="pg-spin" /> : <Check size={14} />}
-              Save entry
+              {isSuccess ? 'Logged!' : 'Save entry'}
             </button>
           </div>
         </form>

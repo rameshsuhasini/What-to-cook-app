@@ -48,6 +48,12 @@ enum Gender {
   PREFER_NOT_TO_SAY
 }
 
+enum NotificationType {
+  ACHIEVEMENT
+  REMINDER
+  MOTIVATION
+}
+
 enum ActivityLevel {
   SEDENTARY    // Little or no exercise — desk job
   LIGHT        // Light exercise 1-3 days/week
@@ -83,6 +89,8 @@ model User {
   pantryItems   PantryItem[]
   weightLogs    WeightLog[]
   nutritionLogs NutritionLog[]
+  notifications Notification[]
+  achievements  UserAchievement[]
 
   @@map("users")
 }
@@ -362,4 +370,46 @@ model NutritionLog {
 
   @@unique([userId, date])
   @@map("nutrition_logs")
+}
+
+// ─────────────────────────────────────────
+// NOTIFICATION
+// Per-user notifications (achievements,
+// reminders, motivation)
+// ─────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  href      String?
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────
+// USER ACHIEVEMENT
+// Tracks which achievements a user has
+// unlocked — one row per unlock, unique
+// so the same achievement can't fire twice
+// ─────────────────────────────────────────
+
+model UserAchievement {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  achievementKey String   @map("achievement_key")
+  unlockedAt     DateTime @default(now()) @map("unlocked_at")
+
+  // Relations
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementKey])
+  @@map("user_achievements")
 }

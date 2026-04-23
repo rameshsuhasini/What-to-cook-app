@@ -12,6 +12,7 @@ import pantryRoutes from './routes/pantry.routes'
 import healthRoutes from './routes/health.routes'
 import aiRoutes from './routes/ai.routes'
 import profileRoutes from './routes/profile.routes'
+import notificationRoutes from './routes/notification.routes'
 
 dotenv.config();
 
@@ -56,6 +57,7 @@ app.use('/api/ai', aiRoutes)
 app.use('/api/groceries', groceryRoutes)
 app.use('/api/pantry', pantryRoutes)
 app.use('/api/profile', profileRoutes)
+app.use('/api/notifications', notificationRoutes)
 app.use('/api', healthRoutes)
 
 // ─── Health Check ─────────────────────────────────────────

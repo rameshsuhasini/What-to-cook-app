@@ -47,7 +47,10 @@
 
 /* ── Reset ──────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
 body {
   font-family: var(--font-body);
   font-size: 15px;
@@ -60,17 +63,18 @@ body {
 .auth-root {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* ── Brand panel (left) ─────────────────── */
 .auth-brand {
   position: relative;
   background-image: url("../public/images/what-to-cook.png");
-  background-size: cover;        /* makes it cover full screen */
-  background-position: center;   /* keeps image centered */
-  background-repeat: no-repeat;  /* prevents tiling */
-  height: 100vh;   
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 100vh;
   overflow: hidden;
   padding: 3rem;
   display: flex;
@@ -269,6 +273,7 @@ body {
   justify-content: center;
   padding: 2.5rem;
   background: white;
+  height: 100vh;
   overflow-y: auto;
 }
 
