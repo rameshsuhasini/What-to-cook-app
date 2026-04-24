@@ -135,6 +135,19 @@ body {
   left: -120px;
 }
 
+/* Coral accent blob for depth */
+.dash-hero::before {
+  content: '';
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(249,115,77,0.22) 0%, rgba(249,115,77,0) 70%);
+  bottom: -70px;
+  left: 38%;
+  pointer-events: none;
+}
+
 
 /* ── Grid ──────────────────────────────── */
 .dash-grid {
@@ -150,6 +163,11 @@ body {
 .meals-section     { grid-column: 2 / 3; }
 .insights-section  { grid-column: 1 / 2; }
 .actions-section   { grid-column: 2 / 3; }
+
+/* Section card tinted backgrounds */
+.weight-section    { background: linear-gradient(145deg, #fffdf5, #fff8e3); border-color: rgba(245,158,11,0.2) !important; }
+.meals-section     { background: linear-gradient(145deg, #f0fdf9, #e4f9f3); border-color: rgba(29,158,117,0.18) !important; }
+.insights-section  { background: linear-gradient(145deg, #faf5ff, #f1e8ff); border-color: rgba(147,51,234,0.15) !important; }
 
 /* ── Card base ─────────────────────────── */
 .card {
@@ -204,7 +222,7 @@ body {
 .section-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--txt2);
@@ -213,7 +231,25 @@ body {
   margin-bottom: 1rem;
 }
 
-.section-label svg { color: var(--teal-400); }
+.section-label svg { color: inherit; }
+
+/* Section icon badge — colored circle per section */
+.section-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  color: var(--teal-400);
+}
+
+.nutrition-section .section-icon-badge { background: rgba(249,115,77,0.12); color: var(--coral-400); }
+.weight-section    .section-icon-badge { background: rgba(245,158,11,0.14); color: #d97706; }
+.meals-section     .section-icon-badge { background: rgba(29,158,117,0.13); color: var(--teal-600); }
+.insights-section  .section-icon-badge { background: rgba(147,51,234,0.1);  color: #9333ea; }
+.actions-section   .section-icon-badge { background: var(--sand-100);        color: var(--txt2); }
 
 /* ── Nutrition cards ───────────────────── */
 .nutrition-cards {
@@ -226,87 +262,104 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
-  padding: 1.25rem 1rem;
+  padding: 1.25rem 1.25rem 0;
   display: flex;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
   box-shadow: var(--card-shadow);
+  overflow: hidden;
   transition: transform 200ms var(--ease), box-shadow 200ms var(--ease);
   cursor: default;
 }
 
-.ring-wrap {
-  position: relative;
-  width: 72px;
-  height: 72px;
-  flex-shrink: 0;
+.nc-body {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
 }
 
-.ring-track { stroke: var(--sand-100); }
-.ring-center {
-  position: absolute;
-  inset: 0;
+.nc-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  color: white;
 }
 
-/* Color variants — ring colors + subtle left accent */
-.nutrition-teal   { border-left: 3px solid var(--teal-400); }
-.nutrition-coral  { border-left: 3px solid var(--coral-400); }
-.nutrition-amber  { border-left: 3px solid var(--amber-400); }
-.nutrition-blue   { border-left: 3px solid var(--blue-400); }
-
-.nutrition-teal   .ring-fill { stroke: var(--teal-400); }
-.nutrition-teal   .ring-center { color: var(--teal-400); }
-.nutrition-coral  .ring-fill { stroke: var(--coral-400); }
-.nutrition-coral  .ring-center { color: var(--coral-400); }
-.nutrition-amber  .ring-fill { stroke: var(--amber-400); }
-.nutrition-amber  .ring-center { color: var(--amber-400); }
-.nutrition-blue   .ring-fill { stroke: var(--blue-400); }
-.nutrition-blue   .ring-center { color: var(--blue-400); }
-
-/* Make the value number bigger and bolder */
-.nutrition-value {
-  font-size: 1.6rem !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.03em !important;
-}
-
-.nutrition-info {
+.nc-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
-.nutrition-value {
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: var(--txt);
-  line-height: 1;
+.nc-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.nc-value {
   font-family: var(--fd);
-  letter-spacing: -0.02em;
-}
-
-.nutrition-unit {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--txt3);
-  margin-left: 2px;
-  font-family: var(--fb);
-}
-
-.nutrition-label {
-  font-size: 0.82rem;
-  font-weight: 500;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
   color: var(--txt);
 }
 
-.nutrition-goal {
+.nc-unit {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--txt3);
+}
+
+.nc-secondary {
   font-size: 0.75rem;
   color: var(--txt3);
-  font-weight: 300;
+  font-weight: 400;
 }
+
+.nc-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin-top: 3px;
+}
+
+.nc-bar-track {
+  height: 5px;
+  background: var(--sand-100);
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.nc-bar-fill {
+  height: 100%;
+  border-radius: 0;
+}
+
+/* Badge backgrounds */
+.nutrition-coral .nc-badge { background: linear-gradient(135deg, #e05540, #f87c6a); }
+.nutrition-teal  .nc-badge { background: linear-gradient(135deg, #1d9e75, #34d399); }
+.nutrition-amber .nc-badge { background: linear-gradient(135deg, #d97706, #fbbf24); }
+.nutrition-blue  .nc-badge { background: linear-gradient(135deg, #2563eb, #60a5fa); }
+
+/* Label color per variant */
+.nutrition-coral .nc-label { color: var(--coral-400); }
+.nutrition-teal  .nc-label { color: var(--teal-400); }
+.nutrition-amber .nc-label { color: var(--amber-400); }
+.nutrition-blue  .nc-label { color: var(--blue-400); }
+
+/* Progress bar fill color */
+.nutrition-coral .nc-bar-fill { background: var(--coral-400); }
+.nutrition-teal  .nc-bar-fill { background: var(--teal-400); }
+.nutrition-amber .nc-bar-fill { background: var(--amber-400); }
+.nutrition-blue  .nc-bar-fill { background: var(--blue-400); }
+
 
 /* ── Weight stats ──────────────────────── */
 .weight-stats {
@@ -316,10 +369,11 @@ body {
 }
 
 .weight-current {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.75rem;
+  font-weight: 700;
   font-family: var(--fd);
-  color: var(--txt);
+  color: var(--teal-600);
+  letter-spacing: -0.03em;
 }
 
 .weight-change {
@@ -595,11 +649,38 @@ body {
   display: block;
 }
 
-/* Action color accents */
-.quick-action-teal  { border-top: 3px solid var(--teal-400); }
-.quick-action-coral { border-top: 3px solid var(--coral-400); }
-.quick-action-amber { border-top: 3px solid var(--amber-400); }
-.quick-action-blue  { border-top: 3px solid var(--blue-400); }
+/* Action color accents — modern vibrant gradients */
+.quick-action-teal  {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  box-shadow: 0 4px 18px rgba(99,102,241,0.3);
+}
+.quick-action-coral {
+  background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+  border: none;
+  box-shadow: 0 4px 18px rgba(244,63,94,0.3);
+}
+.quick-action-amber {
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  border: none;
+  box-shadow: 0 4px 18px rgba(245,158,11,0.3);
+}
+.quick-action-blue  {
+  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  border: none;
+  box-shadow: 0 4px 18px rgba(16,185,129,0.3);
+}
+
+/* White text on all colored action cards */
+.quick-action-teal  .qa-label,
+.quick-action-coral .qa-label,
+.quick-action-amber .qa-label,
+.quick-action-blue  .qa-label { color: white; font-weight: 600; }
+
+.quick-action-teal  .qa-desc,
+.quick-action-coral .qa-desc,
+.quick-action-amber .qa-desc,
+.quick-action-blue  .qa-desc  { color: rgba(255,255,255,0.75); }
 
 /* ── Empty states ──────────────────────── */
 .empty-state {
