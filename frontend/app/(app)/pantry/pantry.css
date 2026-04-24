@@ -749,7 +749,9 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  padding-top: 0.25rem;
+  padding: 1rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--sand-100);
+  margin-top: 0.5rem;
 }
 
 /* ── AI suggestions panel ───────────────── */

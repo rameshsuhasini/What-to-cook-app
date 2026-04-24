@@ -534,7 +534,10 @@ export default function RecipesPage() {
               />
             )}
             <span className="tab-label">
-              {t === 'all' ? 'All Recipes' : 'Saved'}
+              {t === 'all'
+                ? <><UtensilsCrossed size={13} /> All Recipes {data?.pagination?.total != null && <span className="tab-count">{data.pagination.total}</span>}</>
+                : <><Heart size={13} /> Saved {savedData != null && <span className="tab-count">{savedData.length}</span>}</>
+              }
             </span>
           </button>
         ))}

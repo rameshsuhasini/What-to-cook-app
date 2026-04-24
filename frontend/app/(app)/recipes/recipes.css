@@ -309,11 +309,35 @@
 .tab-label {
   position: relative;
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .tab-btn--active .tab-label {
   color: white;
   font-weight: 600;
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.25);
+  color: white;
+  margin-left: 4px;
+  line-height: 1;
+}
+
+.tab-btn:not(.tab-btn--active) .tab-count {
+  background: var(--sand-200);
+  color: var(--text-secondary);
 }
 
 /* ── Recipe grid ─────────────────────── */
