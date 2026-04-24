@@ -1287,10 +1287,12 @@ export default function WeeklyPlannerPage() {
       )}
 
       {/* ── Bottom grid: Nutrition rings + Today's Kitchen ── */}
-      <div className="planner-bottom-grid">
-        <NutritionProgressRings weekView={weekView} />
-        <TodaysKitchen weekView={weekView} />
-      </div>
+      {!isLoading && !isError && (
+        <div className="planner-bottom-grid">
+          <NutritionProgressRings weekView={weekView} />
+          <TodaysKitchen weekView={weekView} />
+        </div>
+      )}
 
       {/* ── Add meal modal ── */}
       <AnimatePresence>

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import {
-  Package, Plus, Trash2, Search, Sparkles, RefreshCw,
+  Package, Plus, Trash2, Search, RefreshCw,
   X, Check, Edit2, AlertTriangle, CheckSquare, MoreHorizontal,
 } from 'lucide-react'
 import {
@@ -13,7 +13,6 @@ import {
   AddPantryItemPayload,
   UpdatePantryItemPayload,
 } from '@/services/pantry.service'
-import { aiApi, AIPantrySuggestions } from '@/services/ai.service'
 import './pantry.css'
 
 // ── Category inference ───────────────────
@@ -90,7 +89,6 @@ export default function PantryPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editItem, setEditItem] = useState<PantryItem | null>(null)
-  const [showAiPanel, setShowAiPanel] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   // Per-shelf select mode
   const [shelfSelectMode, setShelfSelectMode] = useState<string | null>(null) // category name
@@ -133,10 +131,6 @@ export default function PantryPage() {
       pantryApi.getPantryItems({ search: debouncedSearch || undefined, limit: 500 }),
   })
 
-  const { data: aiData, mutate: fetchSuggestions, isPending: suggestionsLoading } =
-    useMutation<AIPantrySuggestions>({
-      mutationFn: () => aiApi.getPantrySuggestions(),
-    })
 
   // ── Mutations ────────────────────────────
 
@@ -222,10 +216,7 @@ export default function PantryPage() {
     .filter((cat) => grouped.has(cat))
     .map((cat) => ({ cat, items: grouped.get(cat)! }))
 
-  const handleAiClick = () => {
-    setShowAiPanel(true)
-    if (!aiData) fetchSuggestions()
-  }
+
 
   return (
     <div className="pt-root">
@@ -256,11 +247,7 @@ export default function PantryPage() {
           <h1 className="pt-title">My Pantry</h1>
         </div>
         <div className="pt-header-actions">
-          <button className="pt-btn pt-btn--ai" onClick={handleAiClick}>
-            <Sparkles size={15} />
-            AI suggestions
-          </button>
-          <button className="pt-btn pt-btn--primary" onClick={() => setShowAddModal(true)}>
+<button className="pt-btn pt-btn--primary" onClick={() => setShowAddModal(true)}>
             <Plus size={15} />
             Add item
           </button>
@@ -538,17 +525,6 @@ export default function PantryPage() {
         )}
       </AnimatePresence>
 
-      {/* ── AI suggestions panel ── */}
-      <AnimatePresence>
-        {showAiPanel && (
-          <AiSuggestionsPanel
-            data={aiData ?? null}
-            isLoading={suggestionsLoading}
-            onRefresh={() => fetchSuggestions()}
-            onClose={() => setShowAiPanel(false)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   )
 }
@@ -765,129 +741,6 @@ function PantryItemModal({
             </button>
           </div>
         </form>
-      </motion.div>
-    </div>
-  )
-}
-
-// ── AI suggestions panel ─────────────────
-
-function AiSuggestionsPanel({
-  data,
-  isLoading,
-  onRefresh,
-  onClose,
-}: {
-  data: AIPantrySuggestions | null
-  isLoading: boolean
-  onRefresh: () => void
-  onClose: () => void
-}) {
-  return (
-    <div className="pt-overlay" onClick={onClose}>
-      <motion.div
-        className="pt-modal pt-modal--ai"
-        onClick={(e) => e.stopPropagation()}
-        initial={{ opacity: 0, x: 40 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 40 }}
-        transition={{ duration: 0.25 }}
-      >
-        <div className="pt-ai-header">
-          <div className="pt-ai-header-left">
-            <div className="pt-ai-icon"><Sparkles size={18} /></div>
-            <div>
-              <h2>AI Pantry Suggestions</h2>
-              <p>Based on what you have at home</p>
-            </div>
-          </div>
-          <div className="pt-ai-actions">
-            <button className="pt-modal-close" onClick={onRefresh} title="Refresh">
-              <RefreshCw size={16} className={isLoading ? 'pt-spin' : ''} />
-            </button>
-            <button className="pt-modal-close" onClick={onClose}><X size={18} /></button>
-          </div>
-        </div>
-
-        <div className="pt-ai-body">
-          {isLoading && (
-            <div className="pt-ai-loading">
-              <div className="pt-ai-dots">
-                <span /><span /><span />
-              </div>
-              <p>Analysing your pantry…</p>
-            </div>
-          )}
-          {!isLoading && !data && (
-            <div className="pt-ai-empty">
-              <p>Click refresh to get recipe suggestions based on your pantry.</p>
-            </div>
-          )}
-          {!isLoading && data && (
-            <>
-              {/* Pantry health score */}
-              <div className="pt-ai-score">
-                <span className="pt-ai-score-label">Pantry health score</span>
-                <div className="pt-ai-score-bar">
-                  <div
-                    className="pt-ai-score-fill"
-                    style={{ width: `${data.pantryHealthScore}%` }}
-                  />
-                </div>
-                <span className="pt-ai-score-num">{data.pantryHealthScore}/100</span>
-              </div>
-
-              {/* Missing essentials */}
-              {data.missingEssentials.length > 0 && (
-                <div className="pt-ai-missing">
-                  <span className="pt-ai-missing-label">Missing essentials:</span>
-                  <span className="pt-ai-missing-items">{data.missingEssentials.join(', ')}</span>
-                </div>
-              )}
-
-              {/* Recipe suggestions */}
-              <ul className="pt-ai-list">
-                {data.suggestions.map((s, i) => (
-                  <motion.li
-                    key={i}
-                    className="pt-ai-item pt-ai-item--recipe"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.08 }}
-                  >
-                    <div className="pt-ai-recipe-header">
-                      <span className="pt-ai-num">{i + 1}</span>
-                      <div className="pt-ai-recipe-title-wrap">
-                        <span className="pt-ai-recipe-title">{s.title}</span>
-                        <span className={`pt-ai-difficulty pt-ai-difficulty--${s.difficulty.toLowerCase()}`}>
-                          {s.difficulty}
-                        </span>
-                      </div>
-                      <span className="pt-ai-recipe-time">
-                        {s.prepTimeMinutes + s.cookTimeMinutes} min
-                      </span>
-                    </div>
-                    <p className="pt-ai-recipe-desc">{s.description}</p>
-                    <div className="pt-ai-ingredients">
-                      {s.usedIngredients.length > 0 && (
-                        <div className="pt-ai-ing-group">
-                          <span className="pt-ai-ing-label pt-ai-ing-label--have">✓ Have</span>
-                          <span className="pt-ai-ing-list">{s.usedIngredients.join(', ')}</span>
-                        </div>
-                      )}
-                      {s.missingIngredients.length > 0 && (
-                        <div className="pt-ai-ing-group">
-                          <span className="pt-ai-ing-label pt-ai-ing-label--need">+ Need</span>
-                          <span className="pt-ai-ing-list">{s.missingIngredients.join(', ')}</span>
-                        </div>
-                      )}
-                    </div>
-                  </motion.li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
       </motion.div>
     </div>
   )

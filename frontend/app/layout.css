@@ -124,6 +124,40 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Modern scrollbar ───────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 200ms ease;
+}
+
+*:hover {
+  scrollbar-color: var(--teal-400) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 99px;
+  transition: background 200ms ease;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--teal-400), var(--teal-600));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--teal-600);
+}
+
 .app-layout {
   display: flex;
   min-height: 100vh;
