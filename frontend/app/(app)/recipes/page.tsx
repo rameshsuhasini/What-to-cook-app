@@ -520,18 +520,24 @@ export default function RecipesPage() {
 
       {/* ── Tabs ── */}
       <div className="recipes-tabs">
-        <button
-          className={`tab-btn ${tab === 'all' ? 'active' : ''}`}
-          onClick={() => handleTabChange('all')}
-        >
-          All Recipes
-        </button>
-        <button
-          className={`tab-btn ${tab === 'saved' ? 'active' : ''}`}
-          onClick={() => handleTabChange('saved')}
-        >
-          Saved
-        </button>
+        {(['all', 'saved'] as const).map(t => (
+          <button
+            key={t}
+            className={`tab-btn ${tab === t ? 'tab-btn--active' : ''}`}
+            onClick={() => handleTabChange(t)}
+          >
+            {tab === t && (
+              <motion.div
+                className="tab-pill"
+                layoutId="recipes-tab-pill"
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              />
+            )}
+            <span className="tab-label">
+              {t === 'all' ? 'All Recipes' : 'Saved'}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* ── Toolbar ── */}
