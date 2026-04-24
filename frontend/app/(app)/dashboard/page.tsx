@@ -5,8 +5,8 @@ import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 import {
   Sparkles, TrendingUp, TrendingDown, ChefHat,
-  Calendar, Flame,
-  Beef, Wheat, Droplets, ArrowRight, RefreshCw,
+  Calendar, Flame, Beef, Wheat, Droplets,
+  ArrowRight, RefreshCw,
   Target, Award
 } from 'lucide-react'
 import {
@@ -224,38 +224,10 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="nutrition-cards">
-            <NutritionRing
-              label="Calories"
-              value={todayNutrition?.calories ?? 0}
-              goal={calorieGoal}
-              unit="kcal"
-              color="coral"
-              icon={<Flame size={16} />}
-            />
-            <NutritionRing
-              label="Protein"
-              value={todayNutrition?.protein ?? 0}
-              goal={proteinGoal}
-              unit="g"
-              color="teal"
-              icon={<Beef size={16} />}
-            />
-            <NutritionRing
-              label="Carbs"
-              value={todayNutrition?.carbs ?? 0}
-              goal={carbGoal}
-              unit="g"
-              color="amber"
-              icon={<Wheat size={16} />}
-            />
-            <NutritionRing
-              label="Fat"
-              value={todayNutrition?.fat ?? 0}
-              goal={fatGoal}
-              unit="g"
-              color="blue"
-              icon={<Droplets size={16} />}
-            />
+            <NutritionRing label="Calories" value={todayNutrition?.calories ?? 0} goal={calorieGoal} unit="kcal" color="coral" icon={<Flame    size={22} />} />
+            <NutritionRing label="Protein"  value={todayNutrition?.protein  ?? 0} goal={proteinGoal} unit="g"    color="teal"  icon={<Beef     size={22} />} />
+            <NutritionRing label="Carbs"    value={todayNutrition?.carbs    ?? 0} goal={carbGoal}    unit="g"    color="amber" icon={<Wheat    size={22} />} />
+            <NutritionRing label="Fat"      value={todayNutrition?.fat      ?? 0} goal={fatGoal}     unit="g"    color="blue"  icon={<Droplets size={22} />} />
           </div>
         </motion.section>
 
@@ -314,7 +286,7 @@ export default function DashboardPage() {
 
         {/* ── Quick actions ── */}
         <motion.section
-          className="actions-section"
+          className="actions-section card"
           custom={4} variants={fadeUp}
           initial="hidden" animate="visible"
         >
@@ -361,7 +333,7 @@ export default function DashboardPage() {
 function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="section-label">
-      {icon}
+      <span className="section-icon-badge">{icon}</span>
       <span>{label}</span>
     </div>
   )
@@ -384,43 +356,34 @@ function AnimatedNumber({ value }: { value: number }) {
 function NutritionRing({
   label, value, goal, unit, color, icon,
 }: {
-  label: string; value: number; goal: number
-  unit: string; color: string; icon: React.ReactNode
+  label: string; value: number; goal: number; unit: string; color: string; icon: React.ReactNode
 }) {
   const pct = Math.min(100, goal > 0 ? (value / goal) * 100 : 0)
-  const r = 28
-  const circ = 2 * Math.PI * r
-  const dash = (pct / 100) * circ
 
   return (
     <motion.div
       className={`nutrition-card nutrition-${color}`}
-      whileHover={{ y: -4, boxShadow: '0 10px 28px rgba(0,0,0,0.11)' }}
+      whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}
       transition={{ duration: 0.2 }}
     >
-      <div className="ring-wrap">
-        <svg width="72" height="72" viewBox="0 0 72 72">
-          <circle cx="36" cy="36" r={r} fill="none" className="ring-track" strokeWidth="5" />
-          <motion.circle
-            cx="36" cy="36" r={r} fill="none"
-            className="ring-fill"
-            strokeWidth="5"
-            strokeLinecap="round"
-            transform="rotate(-90 36 36)"
-            initial={{ strokeDasharray: `0 ${circ}` }}
-            animate={{ strokeDasharray: `${dash} ${circ}` }}
-            transition={{ duration: 0.9, ease: 'easeOut' as const }}
-          />
-        </svg>
-        <div className="ring-center">{icon}</div>
+      <div className="nc-body">
+        <div className="nc-badge">{icon}</div>
+        <div className="nc-info">
+          <div className="nc-value-row">
+            <span className="nc-value"><AnimatedNumber value={value} /></span>
+            <span className="nc-unit">{unit}</span>
+          </div>
+          <span className="nc-secondary">of {goal} {unit}</span>
+          <span className="nc-label">{label}</span>
+        </div>
       </div>
-      <div className="nutrition-info">
-        <span className="nutrition-value">
-          <AnimatedNumber value={value} />
-          <span className="nutrition-unit">{unit}</span>
-        </span>
-        <span className="nutrition-label">{label}</span>
-        <span className="nutrition-goal">of {goal}{unit}</span>
+      <div className="nc-bar-track">
+        <motion.div
+          className="nc-bar-fill"
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.9, ease: 'easeOut' as const }}
+        />
       </div>
     </motion.div>
   )
