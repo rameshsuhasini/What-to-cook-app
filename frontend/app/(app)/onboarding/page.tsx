@@ -6,14 +6,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChefHat, Target, Leaf, ArrowRight, ArrowLeft,
   Loader2, Check, Sparkles, User, Coffee, UtensilsCrossed, Moon,
+  Flame,
 } from 'lucide-react'
-import { profileApi, DietType, Gender } from '@/services/profile.service'
+import { profileApi, DietType, Gender, ActivityLevel } from '@/services/profile.service'
 import { aiApi } from '@/services/ai.service'
 import { useQueryClient } from '@tanstack/react-query'
 import Image from 'next/image'
 import './onboarding.css'
 
 // ── Types ─────────────────────────────────
+
+type WeightGoal = 'LOSE' | 'MAINTAIN' | 'GAIN'
 
 interface OnboardingData {
   // Step 1 — Diet
@@ -24,7 +27,9 @@ interface OnboardingData {
   heightCm: number | ''
   weightKg: number | ''
   targetWeightKg: number | ''
-  // Step 3 — Goals
+  activityLevel: ActivityLevel | ''
+  // Step 3 — Smart goals
+  weightGoal: WeightGoal | ''
   calorieGoal: number | ''
   proteinGoal: number | ''
   carbGoal: number | ''
@@ -51,6 +56,52 @@ const GENDER_OPTIONS: { value: Gender; label: string; emoji: string }[] = [
   { value: 'OTHER',             label: 'Other',           emoji: '⚧' },
   { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say', emoji: '🤐' },
 ]
+
+// ── Activity level options ────────────────
+
+const ACTIVITY_OPTIONS: { value: ActivityLevel; emoji: string; label: string; desc: string; multiplier: number }[] = [
+  { value: 'SEDENTARY',   emoji: '🛋️', label: 'Sedentary',          desc: 'Little or no exercise',              multiplier: 1.2   },
+  { value: 'LIGHT',       emoji: '🚶', label: 'Lightly active',      desc: 'Exercise 1–3 days/week',             multiplier: 1.375 },
+  { value: 'MODERATE',    emoji: '🏃', label: 'Moderately active',   desc: 'Exercise 3–5 days/week',             multiplier: 1.55  },
+  { value: 'ACTIVE',      emoji: '💪', label: 'Very active',         desc: 'Exercise 6–7 days/week',             multiplier: 1.725 },
+  { value: 'VERY_ACTIVE', emoji: '🔥', label: 'Extra active',        desc: 'Physical job + hard daily training', multiplier: 1.9   },
+]
+
+// ── Goal type options ─────────────────────
+
+const GOAL_TYPE_OPTIONS: { value: WeightGoal; emoji: string; label: string; desc: string; delta: number }[] = [
+  { value: 'LOSE',     emoji: '🎯', label: 'Lose weight',   desc: 'Calorie deficit',    delta: -500 },
+  { value: 'MAINTAIN', emoji: '⚖️', label: 'Stay healthy',  desc: 'Maintain weight',    delta: 0    },
+  { value: 'GAIN',     emoji: '💪', label: 'Build muscle',  desc: 'Lean bulk',          delta: +300 },
+]
+
+// ── TDEE helpers ──────────────────────────
+
+function calcBMR(weightKg: number, heightCm: number, age: number, gender: Gender | ''): number {
+  const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age)
+  if (gender === 'MALE')   return base + 5
+  if (gender === 'FEMALE') return base - 161
+  return base - 78
+}
+
+function calcTDEE(weightKg: number, heightCm: number, age: number, gender: Gender | '', activityLevel: ActivityLevel): number {
+  const multiplier = ACTIVITY_OPTIONS.find(a => a.value === activityLevel)?.multiplier ?? 1.55
+  return Math.round(calcBMR(weightKg, heightCm, age, gender) * multiplier)
+}
+
+function suggestMacros(calories: number, goal: WeightGoal) {
+  const splits: Record<WeightGoal, { p: number; c: number; f: number }> = {
+    LOSE:     { p: 0.30, c: 0.35, f: 0.35 },
+    MAINTAIN: { p: 0.25, c: 0.45, f: 0.30 },
+    GAIN:     { p: 0.30, c: 0.45, f: 0.25 },
+  }
+  const { p, c, f } = splits[goal]
+  return {
+    protein: Math.round(calories * p / 4),
+    carbs:   Math.round(calories * c / 4),
+    fat:     Math.round(calories * f / 9),
+  }
+}
 
 // ── Step meta ─────────────────────────────
 
@@ -90,10 +141,12 @@ export default function OnboardingPage() {
     heightCm:        '',
     weightKg:        '',
     targetWeightKg:  '',
-    calorieGoal:     2000,
-    proteinGoal:     150,
-    carbGoal:        200,
-    fatGoal:         65,
+    activityLevel:   '',
+    weightGoal:      '',
+    calorieGoal:     '',
+    proteinGoal:     '',
+    carbGoal:        '',
+    fatGoal:         '',
     allergies:       '',
     healthConditions:'',
     foodPreferences: '',
@@ -116,6 +169,7 @@ export default function OnboardingPage() {
         heightCm:         data.heightCm         === '' ? null : Number(data.heightCm),
         weightKg:         data.weightKg         === '' ? null : Number(data.weightKg),
         targetWeightKg:   data.targetWeightKg   === '' ? null : Number(data.targetWeightKg),
+        activityLevel:    data.activityLevel     === '' ? null : data.activityLevel,
         calorieGoal:      data.calorieGoal      === '' ? null : Number(data.calorieGoal),
         proteinGoal:      data.proteinGoal      === '' ? null : Number(data.proteinGoal),
         carbGoal:         data.carbGoal         === '' ? null : Number(data.carbGoal),
@@ -206,7 +260,7 @@ export default function OnboardingPage() {
             >
               {step === 0 && <StepDiet data={data} set={set} />}
               {step === 1 && <StepBodyStats data={data} set={set} />}
-              {step === 2 && <StepGoals data={data} set={set} />}
+              {step === 2 && <StepSmartGoals data={data} set={set} />}
               {step === 3 && <StepPreferences data={data} set={set} />}
             </motion.div>
           </AnimatePresence>
@@ -420,6 +474,36 @@ function StepBodyStats({
         <BodyField label="Target weight" unit="kg" value={data.targetWeightKg} onChange={v => set('targetWeightKg', v)} placeholder="65" min={20} max={300} />
       </div>
 
+      {/* Activity level */}
+      <div className="ob-body-section">
+        <label className="ob-body-label">Activity level</label>
+        <div className="ob-activity-grid">
+          {ACTIVITY_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              className={`ob-activity-btn ${data.activityLevel === opt.value ? 'ob-activity-btn--active' : ''}`}
+              onClick={() => set('activityLevel', opt.value)}
+            >
+              <span className="ob-activity-emoji">{opt.emoji}</span>
+              <span className="ob-activity-text">
+                <span className="ob-activity-label">{opt.label}</span>
+                <span className="ob-activity-desc">{opt.desc}</span>
+              </span>
+              {data.activityLevel === opt.value && (
+                <motion.span
+                  className="ob-activity-check"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                >
+                  <Check size={11} />
+                </motion.span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <p className="ob-goals-hint">💡 This information stays private and is only used to personalise your experience.</p>
     </div>
   )
@@ -451,26 +535,96 @@ function BodyField({
   )
 }
 
-// ── Step 3: Goals ─────────────────────────
+// ── Step 3: Smart Goals ───────────────────
 
-function StepGoals({
+function StepSmartGoals({
   data,
   set,
 }: {
   data: OnboardingData
   set: <K extends keyof OnboardingData>(key: K, val: OnboardingData[K]) => void
 }) {
+  const canCalc = data.weightKg !== '' && data.heightCm !== '' && data.age !== '' && data.activityLevel !== ''
+
+  const tdee = canCalc
+    ? calcTDEE(Number(data.weightKg), Number(data.heightCm), Number(data.age), data.gender, data.activityLevel as ActivityLevel)
+    : null
+
+  const pickGoal = (goal: WeightGoal) => {
+    set('weightGoal', goal)
+    if (!tdee) return
+    const calories = Math.max(1200, tdee + GOAL_TYPE_OPTIONS.find(g => g.value === goal)!.delta)
+    const macros = suggestMacros(calories, goal)
+    set('calorieGoal', calories)
+    set('proteinGoal', macros.protein)
+    set('carbGoal',    macros.carbs)
+    set('fatGoal',     macros.fat)
+  }
+
+  // Fallback to manual entry if body stats were skipped
+  if (!canCalc) {
+    return (
+      <div className="ob-step">
+        <h2 className="ob-step-title">Set your daily goals</h2>
+        <p className="ob-step-sub">Complete body stats in Step 2 for auto-calculated goals, or enter manually below.</p>
+        <div className="ob-goals-grid">
+          <GoalField label="Calories" unit="kcal" color="coral" value={data.calorieGoal} onChange={v => set('calorieGoal', v)} placeholder="2000" />
+          <GoalField label="Protein"  unit="g"    color="teal"  value={data.proteinGoal} onChange={v => set('proteinGoal', v)} placeholder="150"  />
+          <GoalField label="Carbs"    unit="g"    color="amber" value={data.carbGoal}    onChange={v => set('carbGoal', v)}    placeholder="200"  />
+          <GoalField label="Fat"      unit="g"    color="blue"  value={data.fatGoal}     onChange={v => set('fatGoal', v)}     placeholder="65"   />
+        </div>
+        <p className="ob-goals-hint">💡 You can update these anytime in your Profile.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="ob-step">
-      <h2 className="ob-step-title">Set your daily goals</h2>
-      <p className="ob-step-sub">We'll use these to track your nutrition and build balanced meal plans.</p>
-      <div className="ob-goals-grid">
-        <GoalField label="Calories" unit="kcal" color="coral" value={data.calorieGoal} onChange={v => set('calorieGoal', v)} placeholder="2000" />
-        <GoalField label="Protein"  unit="g"    color="teal"  value={data.proteinGoal} onChange={v => set('proteinGoal', v)} placeholder="150"  />
-        <GoalField label="Carbs"    unit="g"    color="amber" value={data.carbGoal}    onChange={v => set('carbGoal', v)}    placeholder="200"  />
-        <GoalField label="Fat"      unit="g"    color="blue"  value={data.fatGoal}     onChange={v => set('fatGoal', v)}     placeholder="65"   />
+      <h2 className="ob-step-title">Your personalised goals</h2>
+      <p className="ob-step-sub">Based on your stats, here's your TDEE. Pick a goal and we'll suggest your daily targets.</p>
+
+      {/* TDEE pill */}
+      <div className="ob-tdee-pill">
+        <div className="ob-tdee-pill-left">
+          <Flame size={16} className="ob-tdee-icon" />
+          <span className="ob-tdee-label">Your daily TDEE</span>
+        </div>
+        <span className="ob-tdee-value">{tdee} kcal/day</span>
       </div>
-      <p className="ob-goals-hint">💡 Not sure? Our defaults are based on a standard healthy adult. You can update these anytime in Profile.</p>
+
+      {/* Goal type selector */}
+      <label className="ob-body-label" style={{ marginTop: '0.25rem' }}>What's your goal?</label>
+      <div className="ob-goal-type-grid">
+        {GOAL_TYPE_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            className={`ob-goal-type-card ${data.weightGoal === opt.value ? 'ob-goal-type-card--active' : ''}`}
+            onClick={() => pickGoal(opt.value)}
+          >
+            <span className="ob-goal-type-emoji">{opt.emoji}</span>
+            <span className="ob-goal-type-label">{opt.label}</span>
+            <span className="ob-goal-type-desc">{opt.desc}</span>
+            <span className="ob-goal-type-kcal">
+              {opt.delta === 0 ? `${tdee}` : opt.delta > 0 ? `${tdee! + opt.delta}` : `${Math.max(1200, tdee! + opt.delta)}`} kcal
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Editable suggested macros */}
+      {data.weightGoal !== '' && (
+        <>
+          <p className="ob-goals-hint" style={{ marginTop: '0.75rem' }}>
+            ✏️ Tweak the numbers if you'd like — or just hit Continue to accept them.
+          </p>
+          <div className="ob-goals-grid">
+            <GoalField label="Calories" unit="kcal" color="coral" value={data.calorieGoal} onChange={v => set('calorieGoal', v)} placeholder="2000" />
+            <GoalField label="Protein"  unit="g"    color="teal"  value={data.proteinGoal} onChange={v => set('proteinGoal', v)} placeholder="150"  />
+            <GoalField label="Carbs"    unit="g"    color="amber" value={data.carbGoal}    onChange={v => set('carbGoal', v)}    placeholder="200"  />
+            <GoalField label="Fat"      unit="g"    color="blue"  value={data.fatGoal}     onChange={v => set('fatGoal', v)}     placeholder="65"   />
+          </div>
+        </>
+      )}
     </div>
   )
 }

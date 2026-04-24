@@ -284,8 +284,9 @@
 }
 
 .tab-btn {
-  padding: 6px 18px;
-  border-radius: 9px;
+  position: relative;
+  padding: 7px 20px;
+  border-radius: 8px;
   border: none;
   background: none;
   font-family: var(--font-body);
@@ -293,13 +294,50 @@
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: color 200ms ease;
 }
 
-.tab-btn.active {
-  background: white;
-  color: var(--text-primary);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+.tab-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--teal-400), var(--teal-600));
+  box-shadow: 0 2px 8px rgba(29,158,117,0.25);
+  z-index: 0;
+}
+
+.tab-label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tab-btn--active .tab-label {
+  color: white;
+  font-weight: 600;
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.25);
+  color: white;
+  margin-left: 4px;
+  line-height: 1;
+}
+
+.tab-btn:not(.tab-btn--active) .tab-count {
+  background: var(--sand-200);
+  color: var(--text-secondary);
 }
 
 /* ── Recipe grid ─────────────────────── */
