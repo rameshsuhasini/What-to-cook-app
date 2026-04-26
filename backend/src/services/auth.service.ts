@@ -26,7 +26,7 @@ export class AuthService {
    * ALWAYS use this before sending user data
    * to the frontend
    */
-  private sanitizeUser(user: any): SafeUser {
+  private sanitizeUser(user: SafeUser & { passwordHash?: string }): SafeUser {
     return {
       id: user.id,
       name: user.name,
