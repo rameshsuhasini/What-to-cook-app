@@ -135,16 +135,19 @@ function ProgressPageInner() {
   const { data: profile } = useQuery({
     queryKey: ['profile'],
     queryFn: () => profileApi.getProfile(),
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: weightData, isLoading: weightLoading } = useQuery({
     queryKey: ['weight-logs-full'],
     queryFn: () => healthApi.getWeightLogs({ limit: 60 }),
+    staleTime: 3 * 60 * 1000,
   })
 
   const { data: nutritionData, isLoading: nutritionLoading } = useQuery({
     queryKey: ['nutrition-logs-full'],
     queryFn: () => healthApi.getNutritionLogs({ limit: 14 }),
+    staleTime: 2 * 60 * 1000,
   })
 
   // ── Mutations ────────────────────────────
@@ -293,56 +296,71 @@ function ProgressPageInner() {
       </motion.header>
 
       {/* ── Stats grid ── */}
-      <motion.div
-        className="pg-stats-grid"
-        custom={0} variants={fadeUp}
-        initial="hidden" animate="visible"
-      >
-        {/* Current weight */}
-        <StatCard
-          label="Current weight"
-          value={currentWeight != null ? `${currentWeight} kg` : '—'}
-          icon={<Scale size={18} />}
-          color="teal"
-          extra={profileWeight && weightLogs.length === 0 ? 'From profile' : undefined}
-        />
+      {weightLoading || nutritionLoading ? (
+        <div className="pg-stats-grid">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="pg-stat-skeleton">
+              <div className="pg-stat-skeleton-icon" />
+              <div className="pg-stat-skeleton-body">
+                <div className="pg-stat-skeleton-line pg-stat-skeleton-line--label" />
+                <div className="pg-stat-skeleton-line pg-stat-skeleton-line--value" />
+                <div className="pg-stat-skeleton-line pg-stat-skeleton-line--extra" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <motion.div
+          className="pg-stats-grid"
+          custom={0} variants={fadeUp}
+          initial="hidden" animate="visible"
+        >
+          {/* Current weight */}
+          <StatCard
+            label="Current weight"
+            value={currentWeight != null ? `${currentWeight} kg` : '—'}
+            icon={<Scale size={18} />}
+            color="teal"
+            extra={profileWeight && weightLogs.length === 0 ? 'From profile' : undefined}
+          />
 
-        {/* Target weight */}
-        <StatCard
-          label="Target weight"
-          value={targetWeight != null ? `${targetWeight} kg` : '—'}
-          icon={<Target size={18} />}
-          color="blue"
-          extra={kgToGoal != null ? `${kgToGoal} kg to go` : undefined}
-        />
+          {/* Target weight */}
+          <StatCard
+            label="Target weight"
+            value={targetWeight != null ? `${targetWeight} kg` : '—'}
+            icon={<Target size={18} />}
+            color="blue"
+            extra={kgToGoal != null ? `${kgToGoal} kg to go` : undefined}
+          />
 
-        {/* BMI */}
-        <StatCard
-          label="BMI"
-          value={bmi != null ? `${bmi}` : '—'}
-          icon={<Activity size={18} />}
-          color={bmiInfo?.color ?? 'neutral'}
-          extra={bmiInfo?.label}
-        />
+          {/* BMI */}
+          <StatCard
+            label="BMI"
+            value={bmi != null ? `${bmi}` : '—'}
+            icon={<Activity size={18} />}
+            color={bmiInfo?.color ?? 'neutral'}
+            extra={bmiInfo?.label}
+          />
 
-        {/* TDEE */}
-        <StatCard
-          label="Daily energy (TDEE)"
-          value={tdee != null ? `${tdee} kcal` : '—'}
-          icon={<Flame size={18} />}
-          color="coral"
-          extra={tdee != null ? tdeeActivityLabel ?? undefined : 'Set activity level in profile'}
-        />
+          {/* TDEE */}
+          <StatCard
+            label="Daily energy (TDEE)"
+            value={tdee != null ? `${tdee} kcal` : '—'}
+            icon={<Flame size={18} />}
+            color="coral"
+            extra={tdee != null ? tdeeActivityLabel ?? undefined : 'Set activity level in profile'}
+          />
 
-        {/* Today's calories */}
-        <StatCard
-          label="Today's calories"
-          value={todayNutrition ? `${todayNutrition.calories} kcal` : '—'}
-          icon={<Flame size={18} />}
-          color="amber"
-          extra={`Goal: ${calorieGoal} kcal`}
-        />
-      </motion.div>
+          {/* Today's calories */}
+          <StatCard
+            label="Today's calories"
+            value={todayNutrition ? `${todayNutrition.calories} kcal` : '—'}
+            icon={<Flame size={18} />}
+            color="amber"
+            extra={`Goal: ${calorieGoal} kcal`}
+          />
+        </motion.div>
+      )}
 
       {/* ── Goal progress card ── */}
       {goalProgress != null && targetWeight != null && currentWeight != null && (

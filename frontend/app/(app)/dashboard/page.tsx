@@ -63,21 +63,25 @@ export default function DashboardPage() {
   const { data: weightData, isLoading: weightLoading } = useQuery({
     queryKey: ['weight-logs'],
     queryFn: () => healthApi.getWeightLogs({ limit: 30 }),
+    staleTime: 3 * 60 * 1000, // weight changes rarely mid-session
   })
 
   const { data: nutritionData, isLoading: nutritionLoading } = useQuery({
     queryKey: ['nutrition-today'],
     queryFn: () => healthApi.getNutritionLogs({ limit: 7 }),
+    staleTime: 90 * 1000, // nutrition logs updated frequently — 90s
   })
 
   const { data: weekView, isLoading: weekLoading, isError: weekError } = useQuery({
     queryKey: ['meal-plan-week'],
     queryFn: () => mealPlanApi.getWeekView(),
+    staleTime: 3 * 60 * 1000,
   })
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: profileApi.getProfile,
+    staleTime: 5 * 60 * 1000, // profile rarely changes
   })
 
   const isLoading = weightLoading || nutritionLoading || weekLoading || profileLoading

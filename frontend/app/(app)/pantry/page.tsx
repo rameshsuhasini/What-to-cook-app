@@ -129,6 +129,7 @@ export default function PantryPage() {
     queryKey: ['pantry', debouncedSearch],
     queryFn: () =>
       pantryApi.getPantryItems({ search: debouncedSearch || undefined, limit: 500 }),
+    staleTime: 2 * 60 * 1000,
   })
 
 
