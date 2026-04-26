@@ -44,9 +44,10 @@ export default function ProfilePage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [cropSrc, setCropSrc] = useState<string | null>(null)
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError, refetch } = useQuery({
     queryKey: ['profile'],
     queryFn: profileApi.getProfile,
+    staleTime: 5 * 60 * 1000,
   })
 
   const [form, setForm] = useState({
@@ -148,6 +149,35 @@ export default function ProfilePage() {
     return (
       <div className="profile-root profile-loading">
         <Loader2 size={28} className="spin-icon" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="profile-root profile-loading">
+        <Activity size={32} strokeWidth={1.4} style={{ opacity: 0.5 }} />
+        <p style={{ marginTop: '0.75rem', color: 'var(--text-muted, #888)' }}>
+          Failed to load profile. Please try again.
+        </p>
+        <button
+          onClick={() => refetch()}
+          style={{
+            marginTop: '1rem',
+            padding: '0.5rem 1.25rem',
+            borderRadius: '8px',
+            border: 'none',
+            background: 'var(--accent, #5c6ac4)',
+            color: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            fontSize: '0.875rem',
+          }}
+        >
+          Retry
+        </button>
       </div>
     )
   }
