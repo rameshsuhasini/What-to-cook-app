@@ -7,7 +7,7 @@ import {
   ShoppingCart, Trash2, Plus,
   RefreshCw, ChevronDown, ChevronUp, Sparkles,
   Check, X, ShoppingBag, Calendar, Package,
-  Share2, Download, Copy, MessageCircle, CheckSquare, Square,
+  Share2, Download, Copy, MessageCircle, CheckSquare, Square, AlertCircle,
 } from 'lucide-react'
 import {
   groceryApi,
@@ -50,7 +50,7 @@ export default function GroceriesPage() {
 
   // ── Queries ──────────────────────────────
 
-  const { data: groceryData, isLoading } = useQuery({
+  const { data: groceryData, isLoading, isError, refetch } = useQuery({
     queryKey: ['grocery-list'],
     queryFn: () => groceryApi.getGroceryList(),
     staleTime: 2 * 60 * 1000,
@@ -431,8 +431,28 @@ export default function GroceriesPage() {
         )}
       </AnimatePresence>
 
+      {/* ── Error state ── */}
+      {isError && (
+        <motion.div
+          className="gr-empty"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="gr-empty-icon">
+            <AlertCircle size={40} />
+          </div>
+          <h2>Failed to load grocery list</h2>
+          <p>Something went wrong. Please try again.</p>
+          <button className="gr-btn gr-btn--primary" onClick={() => refetch()}>
+            <RefreshCw size={15} />
+            Retry
+          </button>
+        </motion.div>
+      )}
+
       {/* ── Empty state ── */}
-      {!isLoading && !list && (
+      {!isLoading && !isError && !list && (
         <motion.div
           className="gr-empty"
           initial={{ opacity: 0, y: 24 }}
