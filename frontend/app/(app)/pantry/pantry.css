@@ -195,6 +195,7 @@
   border-radius: var(--radius-md);
   box-shadow: 0 8px 28px rgba(0,0,0,0.11), 0 2px 6px rgba(0,0,0,0.06);
   min-width: 178px;
+  max-width: calc(100vw - 2rem);
   z-index: 50;
   overflow: hidden;
   padding: 4px;
@@ -1087,7 +1088,14 @@
   .pt-title { font-size: 1.75rem; }
   .pt-toolbar { flex-direction: column; align-items: stretch; }
   .pt-toolbar-right { justify-content: space-between; }
-  .pt-action-bar { left: 1rem; right: 1rem; transform: none; width: auto; }
+  /* Action bar must clear 72px bottom nav */
+  .pt-action-bar {
+    left: 1rem;
+    right: 1rem;
+    transform: none;
+    width: auto;
+    bottom: calc(72px + 0.75rem);
+  }
 }
 
 @media (max-width: 480px) {

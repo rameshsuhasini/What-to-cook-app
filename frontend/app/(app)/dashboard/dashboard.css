@@ -532,6 +532,7 @@ body {
   align-items: center;
   gap: 5px;
   padding: 5px 12px;
+  min-height: 44px;
   border: 1px solid var(--sand-200);
   border-radius: 999px;
   background: white;
@@ -798,7 +799,7 @@ body {
   .quick-actions   { grid-template-columns: 1fr 1fr; }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 400px) {
   .nutrition-cards { grid-template-columns: 1fr; }
   .quick-actions   { grid-template-columns: 1fr; }
 }

@@ -117,7 +117,6 @@
 }
 @media (max-width: 900px) { .pg-stats-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 760px) { .pg-stats-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 480px) { .pg-stats-grid { grid-template-columns: 1fr; } }
 
 .pg-stat-card {
   background: var(--card-bg);
@@ -676,6 +675,10 @@
 }
 
 @media (max-width: 480px) {
-  .pg-stats-grid { grid-template-columns: repeat(2, 1fr); }
   .pg-title { font-size: 1.6rem; }
+}
+
+@media (max-width: 400px) {
+  /* Full-width stat cards on 375px phones — less cramped */
+  .pg-stats-grid { grid-template-columns: 1fr; }
 }

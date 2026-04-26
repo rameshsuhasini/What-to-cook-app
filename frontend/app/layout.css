@@ -542,7 +542,7 @@
   overflow-y: auto;
 }
 
-/* ── Notification bell (top-right corner, desktop only) ── */
+/* ── Notification bell (top-right corner, hidden on mobile where MobileHeader has it) ── */
 .app-topbar-actions {
   position: fixed;
   top: 16px;
@@ -550,7 +550,7 @@
   z-index: 200;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 640px) {
   .app-topbar-actions { display: none; }
 }
 
@@ -756,9 +756,10 @@
     justify-content: center;
     gap: 3px;
     padding: 6px 4px;
+    min-height: 44px;
     text-decoration: none;
     color: var(--txt3);
-    font-size: 0.6rem;
+    font-size: 0.68rem;
     font-weight: 500;
     letter-spacing: 0.02em;
     transition: color 150ms;
