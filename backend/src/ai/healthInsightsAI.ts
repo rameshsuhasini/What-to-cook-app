@@ -11,7 +11,6 @@
 import { sendAIMessageJSON, TOKEN_LIMITS, JSON_INSTRUCTION } from './aiService'
 import {
   UserContext,
-  GenerateHealthInsightsDTO,
   AIHealthInsights,
 } from './types/ai.types'
 import { WeightTrend, NutritionSummary } from '../types/health.types'
@@ -93,23 +92,22 @@ ${today ? `Today's intake: ${today.calories} kcal, ${today.protein}g protein, ${
   return parts.join('\n')
 }
 
-const validateInsights = (insights: any): AIHealthInsights => {
+const validateInsights = (insights: unknown): AIHealthInsights => {
+  const obj = insights as Record<string, unknown>
   const required = ['overview', 'recommendations', 'weeklyGoals', 'motivationalMessage']
   for (const field of required) {
-    if (!insights[field]) {
+    if (!obj[field]) {
       throw new Error(`AI health insights missing field: ${field}`)
     }
   }
 
   return {
-    overview: insights.overview,
-    weightInsights: insights.weightInsights || null,
-    nutritionInsights: insights.nutritionInsights || null,
-    recommendations: Array.isArray(insights.recommendations)
-      ? insights.recommendations
-      : [],
-    weeklyGoals: Array.isArray(insights.weeklyGoals) ? insights.weeklyGoals : [],
-    motivationalMessage: insights.motivationalMessage,
+    overview: obj.overview as string,
+    weightInsights: (obj.weightInsights as string) || null,
+    nutritionInsights: (obj.nutritionInsights as string) || null,
+    recommendations: Array.isArray(obj.recommendations) ? (obj.recommendations as string[]) : [],
+    weeklyGoals: Array.isArray(obj.weeklyGoals) ? (obj.weeklyGoals as string[]) : [],
+    motivationalMessage: obj.motivationalMessage as string,
   }
 }
 

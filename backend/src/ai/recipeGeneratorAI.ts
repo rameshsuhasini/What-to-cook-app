@@ -10,7 +10,6 @@
 
 import { sendAIMessageJSON, TOKEN_LIMITS, JSON_INSTRUCTION } from './aiService'
 import { UserContext, GenerateRecipeDTO, AIGeneratedRecipe } from './types/ai.types'
-import { DietType } from '@prisma/client'
 
 /**
  * Build the system prompt for recipe generation.
@@ -82,7 +81,7 @@ Respond with this exact JSON schema:
  */
 const buildUserMessage = (
   dto: GenerateRecipeDTO,
-  user: UserContext
+  _user: UserContext
 ): string => {
   const parts = [`Generate a recipe for: "${dto.prompt}"`]
 
@@ -111,7 +110,8 @@ const buildUserMessage = (
  * Validate the AI-generated recipe has required fields
  * and sensible values before saving to DB
  */
-const validateRecipe = (recipe: any): AIGeneratedRecipe => {
+const validateRecipe = (recipe: unknown): AIGeneratedRecipe => {
+  const r = recipe as Record<string, unknown>
   const required = [
     'title', 'description', 'prepTimeMinutes', 'cookTimeMinutes',
     'servings', 'calories', 'protein', 'carbs', 'fat',
@@ -119,31 +119,31 @@ const validateRecipe = (recipe: any): AIGeneratedRecipe => {
   ]
 
   for (const field of required) {
-    if (recipe[field] === undefined || recipe[field] === null) {
+    if (r[field] === undefined || r[field] === null) {
       throw new Error(`AI recipe missing required field: ${field}`)
     }
   }
 
-  if (!Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0) {
+  if (!Array.isArray(r.ingredients) || r.ingredients.length === 0) {
     throw new Error('AI recipe must have at least one ingredient')
   }
 
-  if (!Array.isArray(recipe.steps) || recipe.steps.length === 0) {
+  if (!Array.isArray(r.steps) || r.steps.length === 0) {
     throw new Error('AI recipe must have at least one step')
   }
 
   // Clamp values to sensible ranges
   return {
-    ...recipe,
-    prepTimeMinutes: Math.max(0, Math.min(480, recipe.prepTimeMinutes)),
-    cookTimeMinutes: Math.max(0, Math.min(480, recipe.cookTimeMinutes)),
-    servings: Math.max(1, Math.min(50, recipe.servings)),
-    calories: Math.max(0, Math.min(5000, recipe.calories)),
-    protein: Math.max(0, Math.min(500, recipe.protein)),
-    carbs: Math.max(0, Math.min(1000, recipe.carbs)),
-    fat: Math.max(0, Math.min(500, recipe.fat)),
-    tips: Array.isArray(recipe.tips) ? recipe.tips : [],
-  }
+    ...r,
+    prepTimeMinutes: Math.max(0, Math.min(480, r.prepTimeMinutes as number)),
+    cookTimeMinutes: Math.max(0, Math.min(480, r.cookTimeMinutes as number)),
+    servings: Math.max(1, Math.min(50, r.servings as number)),
+    calories: Math.max(0, Math.min(5000, r.calories as number)),
+    protein: Math.max(0, Math.min(500, r.protein as number)),
+    carbs: Math.max(0, Math.min(1000, r.carbs as number)),
+    fat: Math.max(0, Math.min(500, r.fat as number)),
+    tips: Array.isArray(r.tips) ? r.tips : [],
+  } as AIGeneratedRecipe
 }
 
 /**

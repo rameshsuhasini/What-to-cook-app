@@ -28,4 +28,21 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Clear auth and redirect to login on 401 (expired / invalid token)
+api.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (
+      typeof window !== 'undefined' &&
+      error instanceof Object &&
+      'response' in error &&
+      (error as { response?: { status?: number } }).response?.status === 401
+    ) {
+      localStorage.removeItem('auth-store')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
 export default api

@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from '@/store/auth.store'
 import { healthApi } from '@/services/health.service'
 import { mealPlanApi } from '@/services/meal-plan.service'
+import type { WeekDay } from '@/services/meal-plan.service'
 import { aiApi } from '@/services/ai.service'
 import { profileApi } from '@/services/profile.service'
 import Link from 'next/link'
@@ -389,7 +390,9 @@ function NutritionRing({
   )
 }
 
-function WeightStats({ stats }: { stats: any }) {
+interface WeightStatsData { current?: number | null; totalChange?: number | null }
+
+function WeightStats({ stats }: { stats: WeightStatsData | undefined }) {
   if (!stats?.current) return <span className="no-data-badge">No data yet</span>
 
   const change = stats.totalChange ?? 0
@@ -406,7 +409,9 @@ function WeightStats({ stats }: { stats: any }) {
   )
 }
 
-function WeightChart({ logs }: { logs: any[] }) {
+interface WeightLog { logDate: string; weightKg: number }
+
+function WeightChart({ logs }: { logs: WeightLog[] }) {
   if (logs.length === 0) {
     return (
       <div className="empty-state">
@@ -443,7 +448,7 @@ function WeightChart({ logs }: { logs: any[] }) {
               fontSize: '12px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
             }}
-            formatter={(v: any) => [`${v}kg`, 'Weight']}
+            formatter={(v: number) => [`${v}kg`, 'Weight']}
           />
           <Area type="monotone" dataKey="weight" stroke="#1d9e75" strokeWidth={2} fill="url(#weightGrad)" dot={false} activeDot={{ r: 4, fill: '#1d9e75' }} />
         </AreaChart>
@@ -452,8 +457,8 @@ function WeightChart({ logs }: { logs: any[] }) {
   )
 }
 
-function TodayMeals({ meals }: { meals: any }) {
-  const slots = [
+function TodayMeals({ meals }: { meals: WeekDay | null | undefined }) {
+  const slots: { key: 'breakfast' | 'lunch' | 'dinner' | 'snack'; label: string; icon: string }[] = [
     { key: 'breakfast', label: 'Breakfast', icon: '🌅' },
     { key: 'lunch', label: 'Lunch', icon: '☀️' },
     { key: 'dinner', label: 'Dinner', icon: '🌙' },
@@ -495,7 +500,13 @@ function TodayMeals({ meals }: { meals: any }) {
   )
 }
 
-function HealthInsights({ insight, loading }: { insight: any; loading: boolean }) {
+interface HealthInsightData {
+  overview: string
+  recommendations?: string[]
+  motivationalMessage?: string
+}
+
+function HealthInsights({ insight, loading }: { insight: HealthInsightData | null; loading: boolean }) {
   if (loading) {
     return (
       <div className="insights-loading">
@@ -523,9 +534,9 @@ function HealthInsights({ insight, loading }: { insight: any; loading: boolean }
     <div className="insights-content">
       <p className="insights-overview">{insight.overview}</p>
 
-      {insight.recommendations?.length > 0 && (
+      {(insight.recommendations?.length ?? 0) > 0 && (
         <div className="insights-recommendations">
-          {insight.recommendations.slice(0, 3).map((rec: string, i: number) => (
+          {insight.recommendations!.slice(0, 3).map((rec: string, i: number) => (
             <div key={i} className="rec-item">
               <Award size={12} />
               <span>{rec}</span>

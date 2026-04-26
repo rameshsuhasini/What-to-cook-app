@@ -21,7 +21,7 @@ export class PantryService {
   /**
    * Sanitize Decimal quantity to number
    */
-  private sanitize(item: any): PantryItemResponse {
+  private sanitize(item: Omit<PantryItemResponse, 'quantity'> & { quantity: { toNumber(): number } | number | null }): PantryItemResponse {
     return {
       ...item,
       quantity: item.quantity ? Number(item.quantity) : null,
