@@ -8,6 +8,7 @@ import BottomNav from '@/components/BottomNav'
 import MobileHeader from '@/components/MobileHeader'
 import NotificationBell from '@/components/NotificationBell'
 import AchievementToast from '@/components/AchievementToast'
+import OfflineBanner from '@/components/OfflineBanner'
 import { useOnboardingGuard } from '@/hooks/useOnboardingGuard'
 import '../layout.css'
 
@@ -38,6 +39,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </main>
       <BottomNav />
       <AchievementToast />
+      <OfflineBanner />
     </div>
   )
 }
