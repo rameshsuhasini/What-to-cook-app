@@ -277,7 +277,7 @@ function AddMealModal({
                         onClick={() => onConfirm({ recipeId: r.id })}
                       >
                         {r.imageUrl ? (
-                          <img src={r.imageUrl} alt={r.title} className="recipe-result-img" />
+                          <img src={r.imageUrl} alt={r.title} className="recipe-result-img" loading="lazy" decoding="async" />
                         ) : (
                           <div className="recipe-result-emoji">🍽️</div>
                         )}

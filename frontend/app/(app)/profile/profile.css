@@ -498,7 +498,19 @@
 .crop-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Responsive ─────────────────────── */
+@media (max-width: 768px) {
+  /* Tablet — 3-col → 2-col, 4-col macro → 2-col */
+  .form-grid.cols-3 { grid-template-columns: 1fr 1fr; }
+  .macro-row { grid-template-columns: 1fr 1fr; }
+}
+
 @media (max-width: 700px) {
   .profile-root { padding: 1.25rem; }
+  /* Phone — collapse everything to single column */
   .form-grid, .form-grid.cols-3, .macro-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .profile-header h1 { font-size: 1.7rem; }
+  .profile-avatar-strip { flex-direction: column; align-items: flex-start; }
 }

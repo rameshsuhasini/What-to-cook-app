@@ -10,7 +10,8 @@ export default function Providers({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000,
+            staleTime: 2 * 60 * 1000, // 2 min default — overridden per-query where needed
+            gcTime:    5 * 60 * 1000, // keep unused data for 5 min before GC
             retry: 1,
           },
         },
