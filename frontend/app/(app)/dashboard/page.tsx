@@ -448,7 +448,7 @@ function WeightChart({ logs }: { logs: WeightLog[] }) {
               fontSize: '12px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
             }}
-            formatter={(v: number) => [`${v}kg`, 'Weight']}
+            formatter={(v) => [`${v}kg`, 'Weight']}
           />
           <Area type="monotone" dataKey="weight" stroke="#1d9e75" strokeWidth={2} fill="url(#weightGrad)" dot={false} activeDot={{ r: 4, fill: '#1d9e75' }} />
         </AreaChart>
