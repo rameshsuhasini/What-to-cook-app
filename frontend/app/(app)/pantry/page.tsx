@@ -125,7 +125,7 @@ export default function PantryPage() {
   }, [])
 
   // Load all items — no pagination
-  const { data: pantryData, isLoading } = useQuery({
+  const { data: pantryData, isLoading, isError, refetch } = useQuery({
     queryKey: ['pantry', debouncedSearch],
     queryFn: () =>
       pantryApi.getPantryItems({ search: debouncedSearch || undefined, limit: 500 }),
@@ -286,8 +286,28 @@ export default function PantryPage() {
         )}
       </motion.div>
 
+      {/* ── Error state ── */}
+      {isError && (
+        <motion.div
+          className="pt-empty"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="pt-empty-icon">
+            <AlertTriangle size={40} />
+          </div>
+          <h2>Failed to load pantry</h2>
+          <p>Something went wrong. Please try again.</p>
+          <button className="pt-btn pt-btn--primary" onClick={() => refetch()}>
+            <RefreshCw size={15} />
+            Retry
+          </button>
+        </motion.div>
+      )}
+
       {/* ── Empty state ── */}
-      {!isLoading && items.length === 0 && (
+      {!isLoading && !isError && items.length === 0 && (
         <motion.div
           className="pt-empty"
           initial={{ opacity: 0, y: 24 }}
