@@ -99,7 +99,7 @@ export default function RecipeDetailPage() {
         transition={{ duration: 0.4 }}
       >
         {recipe.imageUrl ? (
-          <img src={recipe.imageUrl} alt={recipe.title} className="detail-hero-img" />
+          <img src={recipe.imageUrl} alt={recipe.title} className="detail-hero-img" loading="lazy" decoding="async" />
         ) : (
           <div className="detail-hero-placeholder">{emoji}</div>
         )}

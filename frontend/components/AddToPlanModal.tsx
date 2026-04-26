@@ -36,7 +36,7 @@ export default function AddToPlanModal({ recipeId, recipeTitle, onClose }: Props
   const { data: weekView, isLoading: weekLoading } = useQuery({
     queryKey: ['week-view-modal'],
     queryFn: () => mealPlanApi.getWeekView(),
-    staleTime: 30_000,
+    staleTime: 2 * 60 * 1000,
   })
 
   const { mutate: addToPlan, isPending } = useMutation({

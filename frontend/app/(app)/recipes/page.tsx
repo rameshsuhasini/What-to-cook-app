@@ -299,7 +299,13 @@ function RecipeCard({
     >
       <div className="card-img-wrap">
         {recipe.imageUrl ? (
-          <img src={recipe.imageUrl} alt={recipe.title} className="card-img" />
+          <img
+            src={recipe.imageUrl}
+            alt={recipe.title}
+            className="card-img"
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <div className="card-img-placeholder">
             <span className="placeholder-emoji">
@@ -419,6 +425,7 @@ export default function RecipesPage() {
         cuisine: cuisine || undefined,
       }),
     enabled: tab === 'all',
+    staleTime: 3 * 60 * 1000, // recipe list changes infrequently
   })
 
   // Saved recipes query
@@ -426,6 +433,7 @@ export default function RecipesPage() {
     queryKey: ['recipes-saved'],
     queryFn: recipeApi.getSavedRecipes,
     enabled: tab === 'saved',
+    staleTime: 3 * 60 * 1000,
   })
 
   // Optimistically toggle save
@@ -624,8 +632,20 @@ export default function RecipesPage() {
 
       {/* ── Content ── */}
       {loading ? (
-        <div className="recipes-loading">
-          <Loader2 size={28} className="spin-icon" />
+        <div className="recipe-grid">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="recipe-skeleton">
+              <div className="recipe-skeleton-img" />
+              <div className="recipe-skeleton-body">
+                <div className="recipe-skeleton-line recipe-skeleton-line--tag" />
+                <div className="recipe-skeleton-line recipe-skeleton-line--title" />
+                <div className="recipe-skeleton-line recipe-skeleton-line--title2" />
+                <div className="recipe-skeleton-line recipe-skeleton-line--desc" />
+                <div className="recipe-skeleton-line recipe-skeleton-line--desc2" />
+                <div className="recipe-skeleton-line recipe-skeleton-line--meta" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : hasError ? (
         <div className="recipes-empty">

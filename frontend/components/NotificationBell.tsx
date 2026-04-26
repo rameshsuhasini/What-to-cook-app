@@ -39,7 +39,8 @@ export default function NotificationBell() {
   const { data } = useQuery({
     queryKey: ['notifications'],
     queryFn: notificationApi.getNotifications,
-    refetchInterval: 60_000,
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 2 * 60 * 1000, // poll every 2 min, aligned with staleTime
   })
 
   const { mutate: markAllRead } = useMutation({

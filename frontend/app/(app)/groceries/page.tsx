@@ -53,11 +53,13 @@ export default function GroceriesPage() {
   const { data: groceryData, isLoading } = useQuery({
     queryKey: ['grocery-list'],
     queryFn: () => groceryApi.getGroceryList(),
+    staleTime: 2 * 60 * 1000,
   })
 
   const { data: weekView } = useQuery({
     queryKey: ['meal-plan-week'],
     queryFn: () => mealPlanApi.getWeekView(),
+    staleTime: 3 * 60 * 1000,
   })
 
   // ── Mutations ────────────────────────────
