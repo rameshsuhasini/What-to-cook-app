@@ -85,14 +85,15 @@ const buildUserMessage = (
   return parts.join('\n')
 }
 
-const validateMealPlan = (plan: any, expectedDays: number): AIGeneratedMealPlan => {
-  if (!plan.days || !Array.isArray(plan.days) || plan.days.length === 0) {
+const validateMealPlan = (plan: unknown, expectedDays: number): AIGeneratedMealPlan => {
+  const p = plan as Record<string, unknown>
+  if (!p.days || !Array.isArray(p.days) || p.days.length === 0) {
     throw new Error('AI meal plan returned no days')
   }
 
   // Trim extra days if AI returned more than requested; accept fewer gracefully
-  const days = plan.days.slice(0, expectedDays).filter(
-    (day: any) => day.breakfast && day.lunch && day.dinner
+  const days = (p.days as Record<string, unknown>[]).slice(0, expectedDays).filter(
+    (day) => day.breakfast && day.lunch && day.dinner
   )
 
   if (days.length === 0) {
@@ -100,11 +101,11 @@ const validateMealPlan = (plan: any, expectedDays: number): AIGeneratedMealPlan 
   }
 
   return {
-    ...plan,
+    ...p,
     days,
     shoppingTips: [],
     nutritionSummary: '',
-  }
+  } as unknown as AIGeneratedMealPlan
 }
 
 export const generateMealPlan = async (
