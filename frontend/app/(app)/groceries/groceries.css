@@ -1032,9 +1032,14 @@
   .gr-header-actions { width: 100%; flex-wrap: wrap; }
   .gr-summary { gap: 0.75rem; }
   .gr-title { font-size: 1.7rem; }
+  /* Float bar must clear 72px bottom nav */
+  .gr-float-bar { bottom: calc(72px + 0.75rem); }
 }
 
 @media (max-width: 480px) {
   .gr-summary { flex-direction: column; }
   .gr-summary-stat { width: 100%; }
+  /* Shrink float bar text so it fits on narrow screens */
+  .gr-float-info { font-size: 0.75rem; }
+  .gr-float-btn { font-size: 0.72rem; padding: 0.4rem 0.65rem; }
 }
