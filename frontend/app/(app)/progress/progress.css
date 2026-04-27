@@ -50,7 +50,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
   margin-bottom: 1.25rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 /* ── Shared card base ───────────────────── */
@@ -263,16 +263,14 @@
 }
 
 .pg-log-btn--nutrition {
-  background: var(--sand-100);
-  color: var(--txt);
-  border: 1px solid var(--sand-200);
+  background: var(--teal-400);
+  color: #fff;
 }
 
 .pg-log-btn--nutrition:hover {
-  background: var(--amber-50);
-  border-color: var(--amber-100);
-  color: var(--amber-600);
+  background: var(--teal-600);
   transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(29,158,117,0.3);
 }
 
 /* ── Pills ──────────────────────────────── */
@@ -649,38 +647,6 @@
   font-weight: 600;
   width: fit-content;
 }
-
-/* ── Heatmap ────────────────────────────── */
-.pg-heatmap {}
-
-.pg-heatmap-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--txt3);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 6px;
-}
-
-.pg-heatmap-row {
-  display: flex;
-  gap: 3px;
-  flex-wrap: wrap;
-}
-
-.pg-heatmap-day {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  transition: transform 150ms ease;
-}
-
-.pg-heatmap-day:hover { transform: scale(1.2); }
-
-.pg-heatmap-day--logged  { background: var(--teal-200); }
-.pg-heatmap-day--missed  { background: var(--sand-200); }
-.pg-heatmap-day--today   { background: var(--teal-400); box-shadow: 0 0 0 2px rgba(29,158,117,0.25); }
-.pg-heatmap-day--future  { background: var(--sand-100); opacity: 0.4; }
 
 /* ── Chart skeleton ─────────────────────── */
 .pg-chart-skeleton {
@@ -1082,11 +1048,6 @@
   }
 
   .pg-donut-val { font-size: 0.85rem; }
-
-  .pg-heatmap-day {
-    width: 16px;
-    height: 16px;
-  }
 
   .pg-hero-skeleton {
     height: 360px;

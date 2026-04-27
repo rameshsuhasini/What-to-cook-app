@@ -26,8 +26,6 @@ interface TooltipEntry {
   color: string
 }
 
-type HeatmapStatus = 'logged' | 'missed' | 'today' | 'future'
-
 // ── Constants ────────────────────────────
 const MAX_REFRESHES = 3
 
@@ -72,13 +70,14 @@ function calcTDEE(
   return Math.round(bmr * (ACTIVITY_MULTIPLIERS[activityLevel] ?? 1.55))
 }
 
-function calcStreak(sortedAscLogs: WeightLog[]): number {
-  if (sortedAscLogs.length === 0) return 0
+// Takes an array of date strings and counts consecutive days logged up to today
+function calcStreak(datStrings: string[]): number {
+  if (datStrings.length === 0) return 0
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const loggedTimes = new Set(
-    sortedAscLogs.map(l => {
-      const d = new Date(l.logDate)
+    datStrings.map(s => {
+      const d = new Date(s)
       d.setHours(0, 0, 0, 0)
       return d.getTime()
     }),
@@ -90,25 +89,6 @@ function calcStreak(sortedAscLogs: WeightLog[]): number {
     cur.setDate(cur.getDate() - 1)
   }
   return streak
-}
-
-function buildHeatmap(logDates: string[], days = 14): HeatmapStatus[] {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const logged = new Set(
-    logDates.map(d => {
-      const dt = new Date(d)
-      dt.setHours(0, 0, 0, 0)
-      return dt.getTime()
-    }),
-  )
-  return Array.from({ length: days }, (_, i) => {
-    const d = new Date(today)
-    d.setDate(d.getDate() - (days - 1 - i))
-    if (d.getTime() === today.getTime()) return 'today'
-    if (logged.has(d.getTime()))         return 'logged'
-    return 'missed'
-  })
 }
 
 // ── Sub-components ────────────────────────
@@ -252,7 +232,8 @@ function ProgressPageInner() {
   const [showWeightModal,    setShowWeightModal]    = useState(false)
   const [showNutritionModal, setShowNutritionModal] = useState(false)
   const [toast,    setToast]    = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
-  const [weightRange, setWeightRange] = useState<7 | 30 | 90>(30)
+  const [weightRange,    setWeightRange]    = useState<7 | 30 | 90>(30)
+  const [nutritionRange, setNutritionRange] = useState<7 | 30 | 90>(30)
   const [insight,        setInsight]        = useState<HealthInsights | null>(null)
   const [insightLoading, setInsightLoading] = useState(false)
   const [insightRefreshCount, setInsightRefreshCount] = useState(0)
@@ -294,7 +275,7 @@ function ProgressPageInner() {
 
   const { data: nutritionData, isLoading: nutritionLoading } = useQuery({
     queryKey: ['nutrition-logs-full'],
-    queryFn:  () => healthApi.getNutritionLogs({ limit: 14 }),
+    queryFn:  () => healthApi.getNutritionLogs({ limit: 90 }),
     staleTime: 2 * 60 * 1000,
   })
 
@@ -316,7 +297,9 @@ function ProgressPageInner() {
       return
     }
 
-    if (mountedRef.current) setInsightLoading(true)
+    // Show fallback immediately so the card is never blank, then silently
+    // replace with the real AI insight when the API responds
+    if (mountedRef.current) setInsight(FALLBACK_INSIGHT)
     aiApi
       .generateHealthInsights()
       .then(result => {
@@ -324,13 +307,7 @@ function ProgressPageInner() {
         setInsight(result)
         localStorage.setItem(insightCacheKey, JSON.stringify(result))
       })
-      .catch(() => {
-        if (!mountedRef.current) return
-        setInsight(FALLBACK_INSIGHT)
-      })
-      .finally(() => {
-        if (mountedRef.current) setInsightLoading(false)
-      })
+      .catch(() => { /* fallback already shown — nothing to do */ })
   }, [insightCacheKey, insightCountKey])
 
   const handleRefreshInsight = useCallback(() => {
@@ -422,9 +399,8 @@ function ProgressPageInner() {
     ? parseFloat(Math.abs(currentWeight - targetWeight).toFixed(1))
     : null
 
-  const weightStreak    = calcStreak(sortedWeightLogs)
-  const weightHeatmap   = buildHeatmap(sortedWeightLogs.map(l => l.logDate))
-  const nutritionHeatmap = buildHeatmap(nutritionLogs.map(l => l.date))
+  const weightStreak    = calcStreak(sortedWeightLogs.map(l => l.logDate))
+  const nutritionStreak = calcStreak(nutritionLogs.map(l => l.date))
 
   const cutoffMs        = Date.now() - weightRange * 24 * 60 * 60 * 1000
   const weightChartData = sortedWeightLogs
@@ -434,9 +410,10 @@ function ProgressPageInner() {
       weight: l.weightKg,
     }))
 
+  const nutritionCutoffMs  = Date.now() - nutritionRange * 24 * 60 * 60 * 1000
   const nutritionChartData = [...nutritionLogs]
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-14)
+    .filter(l => new Date(l.date).getTime() >= nutritionCutoffMs)
     .map(l => ({
       date:     new Date(l.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
       calories: l.calories,
@@ -711,25 +688,8 @@ function ProgressPageInner() {
             </div>
           </div>
 
-          {sortedWeightLogs.length > 0 && (
-            <>
-              {weightStreak > 0 && (
-                <div className="pg-streak-badge">🔥 {weightStreak}-day logging streak</div>
-              )}
-              <div className="pg-heatmap">
-                <div className="pg-heatmap-label">Last 14 days</div>
-                <div className="pg-heatmap-row">
-                  {weightHeatmap.map((status, i) => (
-                    <div
-                      key={i}
-                      className={`pg-heatmap-day pg-heatmap-day--${status}`}
-                      title={status}
-                      aria-label={status}
-                    />
-                  ))}
-                </div>
-              </div>
-            </>
+          {weightStreak > 0 && (
+            <div className="pg-streak-badge">🔥 {weightStreak}-day logging streak</div>
           )}
 
           {weightLoading ? (
@@ -826,24 +786,23 @@ function ProgressPageInner() {
           <div className="pg-chart-header">
             <div>
               <h2 className="pg-chart-title">Nutrition History</h2>
-              <span className="pg-chart-sub">Last 14 days</span>
+              <span className="pg-chart-sub">{nutritionChartData.length} entries in range</span>
+            </div>
+            <div className="pg-range-btns">
+              {([7, 30, 90] as const).map(r => (
+                <button
+                  key={r}
+                  className={`pg-range-btn${nutritionRange === r ? ' pg-range-btn--active' : ''}`}
+                  onClick={() => setNutritionRange(r)}
+                >
+                  {r}d
+                </button>
+              ))}
             </div>
           </div>
 
-          {nutritionLogs.length > 0 && (
-            <div className="pg-heatmap">
-              <div className="pg-heatmap-label">Days logged</div>
-              <div className="pg-heatmap-row">
-                {nutritionHeatmap.map((status, i) => (
-                  <div
-                    key={i}
-                    className={`pg-heatmap-day pg-heatmap-day--${status}`}
-                    title={status}
-                    aria-label={status}
-                  />
-                ))}
-              </div>
-            </div>
+          {nutritionStreak > 0 && (
+            <div className="pg-streak-badge">🔥 {nutritionStreak}-day logging streak</div>
           )}
 
           {nutritionLoading ? (
