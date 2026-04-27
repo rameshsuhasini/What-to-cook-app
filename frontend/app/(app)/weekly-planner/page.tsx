@@ -14,6 +14,7 @@ import { mealPlanApi, MealPlanItem, MealType, WeekView } from '@/services/meal-p
 import { recipeApi, Recipe } from '@/services/recipe.service'
 import { NutritionProgressRings } from './NutritionProgressRings'
 import { TodaysKitchen } from './TodaysKitchen'
+import EmptyState from '@/components/EmptyState'
 
 // ── Helpers ───────────────────────────────────────────────
 
@@ -1136,6 +1137,9 @@ export default function WeeklyPlannerPage() {
   const weekDates = Array.from({ length: 7 }, (_, i) => toISO(addDays(weekStart, i)))
   const weekRange = formatRange(weekStart)
 
+  const allSlotsEmpty = !isLoading && !isError && weekView != null &&
+    weekView.days.every(d => !d.breakfast && !d.lunch && !d.dinner && !d.snack)
+
   return (
     <div className="planner-root">
       {/* ── Top bar ── */}
@@ -1210,8 +1214,38 @@ export default function WeeklyPlannerPage() {
           <p>Couldn't load your meal plan. Check your connection and try again.</p>
         </div>
       ) : (
-        <motion.div
-          className="planner-grid-wrap"
+        <>
+          {allSlotsEmpty && (
+            <EmptyState
+              className="planner-empty-banner"
+              illustration={
+                <svg viewBox="0 0 148 128" fill="none" aria-hidden="true">
+                  {/* Calendar base */}
+                  <rect x="16" y="24" width="116" height="88" rx="8" fill="var(--teal-50)" stroke="var(--teal-100)" strokeWidth="1.5" />
+                  {/* Header bar */}
+                  <rect x="16" y="24" width="116" height="24" rx="8" fill="var(--teal-200)" />
+                  <rect x="16" y="40" width="116" height="8" fill="var(--teal-200)" />
+                  {/* Binding dots */}
+                  <circle cx="42" cy="24" r="4" fill="var(--teal-400)" />
+                  <circle cx="74" cy="24" r="4" fill="var(--teal-400)" />
+                  <circle cx="106" cy="24" r="4" fill="var(--teal-400)" />
+                  {/* Empty grid cells — 3 rows × 4 cols */}
+                  {[0,1,2,3].map(c => [0,1,2].map(r => (
+                    <rect key={`${c}-${r}`} x={22 + c * 28} y={54 + r * 18} width="22" height="13" rx="3"
+                      fill="white" stroke="var(--teal-100)" strokeWidth="1" opacity="0.8" />
+                  )))}
+                  {/* Sparkle */}
+                  <path d="M120 10 L122 17 L129 19 L122 21 L120 28 L118 21 L111 19 L118 17 Z" fill="var(--amber-300)" />
+                  <path d="M134 4 L135 8 L139 9 L135 10 L134 14 L133 10 L129 9 L133 8 Z" fill="var(--teal-300)" opacity="0.8" />
+                </svg>
+              }
+              title="Your week is clear — let's fill it"
+              description="Add meals to any slot using the + buttons, or let AI plan your whole week in seconds."
+              primaryAction={{ label: 'Generate with AI', icon: <Sparkles size={15} />, onClick: () => setShowAI(true) }}
+            />
+          )}
+          <motion.div
+            className="planner-grid-wrap"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.08 }}
@@ -1284,6 +1318,7 @@ export default function WeeklyPlannerPage() {
             ))}
           </div>
         </motion.div>
+        </>
       )}
 
       {/* ── Bottom grid: Nutrition rings + Today's Kitchen ── */}

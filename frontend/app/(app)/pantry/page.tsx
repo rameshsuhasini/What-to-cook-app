@@ -13,6 +13,7 @@ import {
   AddPantryItemPayload,
   UpdatePantryItemPayload,
 } from '@/services/pantry.service'
+import EmptyState from '@/components/EmptyState'
 import './pantry.css'
 
 // ── Category inference ───────────────────
@@ -308,26 +309,54 @@ export default function PantryPage() {
 
       {/* ── Empty state ── */}
       {!isLoading && !isError && items.length === 0 && (
-        <motion.div
-          className="pt-empty"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="pt-empty-icon">
-            <Package size={40} />
-          </div>
-          <h2>{debouncedSearch ? 'No items match your search' : 'Your pantry is empty'}</h2>
-          <p>
-            {debouncedSearch
-              ? 'Try a different search term.'
-              : 'Start tracking ingredients you have at home to get personalised recipe suggestions.'}
-          </p>
-          {!debouncedSearch && (
-            <button className="pt-btn pt-btn--primary" onClick={() => setShowAddModal(true)}>
-              <Plus size={15} />
-              Add first item
-            </button>
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          {debouncedSearch ? (
+            <EmptyState
+              illustration={
+                <svg viewBox="0 0 148 128" fill="none" aria-hidden="true">
+                  <circle cx="74" cy="64" r="52" fill="var(--sand-100)" />
+                  <circle cx="74" cy="52" r="22" fill="var(--sand-200)" stroke="var(--sand-300)" strokeWidth="1.5" />
+                  <line x1="90" y1="68" x2="104" y2="82" stroke="var(--txt3)" strokeWidth="4" strokeLinecap="round" />
+                  <line x1="100" y1="68" x2="86" y2="82" stroke="var(--txt3)" strokeWidth="4" strokeLinecap="round" />
+                </svg>
+              }
+              title="No items match your search"
+              description="Try a different search term or clear the search to see all pantry items."
+            />
+          ) : (
+            <EmptyState
+              illustration={
+                <svg viewBox="0 0 148 128" fill="none" aria-hidden="true">
+                  {/* Back shelf */}
+                  <rect x="14" y="94" width="120" height="7" rx="3" fill="var(--teal-100)" />
+                  {/* Middle shelf */}
+                  <rect x="14" y="57" width="120" height="7" rx="3" fill="var(--teal-100)" />
+                  {/* Shelf supports */}
+                  <rect x="20" y="57" width="4" height="37" rx="2" fill="var(--sand-200)" />
+                  <rect x="124" y="57" width="4" height="37" rx="2" fill="var(--sand-200)" />
+                  {/* Jar (left, bottom shelf) */}
+                  <rect x="28" y="68" width="22" height="26" rx="4" fill="var(--teal-200)" stroke="var(--teal-300)" strokeWidth="1.2" />
+                  <rect x="31" y="64" width="16" height="7" rx="2" fill="var(--teal-400)" />
+                  <rect x="34" y="74" width="10" height="2" rx="1" fill="var(--teal-400)" opacity="0.5" />
+                  {/* Can (centre, bottom shelf) */}
+                  <rect x="62" y="71" width="24" height="23" rx="3" fill="var(--amber-200)" stroke="var(--amber-300)" strokeWidth="1.2" />
+                  <rect x="65" y="79" width="18" height="2" rx="1" fill="var(--amber-400)" opacity="0.6" />
+                  <rect x="65" y="83" width="12" height="2" rx="1" fill="var(--amber-400)" opacity="0.4" />
+                  {/* Bottle (right, bottom shelf) */}
+                  <rect x="98" y="64" width="16" height="30" rx="5" fill="var(--teal-100)" stroke="var(--teal-200)" strokeWidth="1.2" />
+                  <rect x="102" y="59" width="8" height="8" rx="2" fill="var(--teal-200)" />
+                  {/* Small jar (top shelf) */}
+                  <rect x="44" y="30" width="18" height="27" rx="3" fill="var(--amber-100)" stroke="var(--amber-200)" strokeWidth="1.2" />
+                  <rect x="47" y="26" width="12" height="7" rx="2" fill="var(--amber-300)" />
+                  {/* Tin (top shelf right) */}
+                  <rect x="84" y="34" width="20" height="23" rx="3" fill="var(--teal-100)" stroke="var(--teal-200)" strokeWidth="1.2" />
+                  <rect x="87" y="42" width="14" height="2" rx="1" fill="var(--teal-300)" opacity="0.6" />
+                </svg>
+              }
+              title="Your pantry is empty"
+              description="Start tracking ingredients you have at home to get personalised recipe suggestions and avoid food waste."
+              primaryAction={{ label: 'Add first ingredient', icon: <Plus size={15} />, onClick: () => setShowAddModal(true) }}
+            />
           )}
         </motion.div>
       )}

@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from 'react'
 import {
   ShoppingCart, Trash2, Plus,
   RefreshCw, ChevronDown, ChevronUp, Sparkles,
-  Check, X, ShoppingBag, Calendar, Package,
+  Check, X, Calendar, Package,
   Share2, Download, Copy, MessageCircle, CheckSquare, Square, AlertCircle,
 } from 'lucide-react'
 import {
@@ -16,6 +16,8 @@ import {
 } from '@/services/grocery.service'
 import { pantryApi } from '@/services/pantry.service'
 import { mealPlanApi } from '@/services/meal-plan.service'
+import { useRouter } from 'next/navigation'
+import EmptyState from '@/components/EmptyState'
 import './groceries.css'
 
 // ── Animation variants ───────────────────
@@ -35,6 +37,7 @@ const itemVariants = {
 
 export default function GroceriesPage() {
   const queryClient = useQueryClient()
+  const router = useRouter()
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
   const [showAddModal, setShowAddModal] = useState(false)
   const [showGenModal, setShowGenModal] = useState(false)
@@ -453,24 +456,60 @@ export default function GroceriesPage() {
 
       {/* ── Empty state ── */}
       {!isLoading && !isError && !list && (
-        <motion.div
-          className="gr-empty"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="gr-empty-icon">
-            <ShoppingBag size={40} />
-          </div>
-          <h2>No grocery list yet</h2>
-          <p>Generate a list from your weekly meal plan to get started.</p>
-          <button
-            className="gr-btn gr-btn--primary"
-            onClick={() => setShowGenModal(true)}
-          >
-            <Sparkles size={15} />
-            Generate grocery list
-          </button>
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          {!mealPlanId ? (
+            <EmptyState
+              illustration={
+                <svg viewBox="0 0 148 128" fill="none" aria-hidden="true">
+                  {/* Bag body */}
+                  <path d="M34 52 L114 52 L104 108 L44 108 Z" fill="var(--teal-50)" stroke="var(--teal-200)" strokeWidth="1.5" strokeLinejoin="round" />
+                  {/* Handles */}
+                  <path d="M56 52 C56 28 92 28 92 52" stroke="var(--teal-300)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                  {/* Question mark */}
+                  <text x="74" y="90" textAnchor="middle" fontSize="32" fontWeight="700" fill="var(--teal-300)" fontFamily="serif">?</text>
+                  {/* Calendar hint */}
+                  <rect x="10" y="8" width="36" height="32" rx="5" fill="var(--sand-100)" stroke="var(--sand-300)" strokeWidth="1.2" />
+                  <rect x="10" y="8" width="36" height="11" rx="5" fill="var(--sand-300)" />
+                  <rect x="10" y="16" width="36" height="3" fill="var(--sand-300)" />
+                  <rect x="16" y="24" width="6" height="5" rx="1" fill="var(--sand-300)" opacity="0.6" />
+                  <rect x="25" y="24" width="6" height="5" rx="1" fill="var(--sand-300)" opacity="0.6" />
+                  <rect x="34" y="24" width="6" height="5" rx="1" fill="var(--sand-300)" opacity="0.6" />
+                  {/* Arrow */}
+                  <path d="M48 24 L58 24" stroke="var(--teal-300)" strokeWidth="2" strokeLinecap="round" markerEnd="url(#arr)" />
+                  <defs>
+                    <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+                      <path d="M0 1 L4 3 L0 5" stroke="var(--teal-300)" strokeWidth="1" fill="none" />
+                    </marker>
+                  </defs>
+                </svg>
+              }
+              title="No meal plan yet"
+              description="Create a weekly meal plan first, then generate your grocery list automatically — no manual entry needed."
+              primaryAction={{ label: 'Go to planner', icon: <Calendar size={15} />, onClick: () => router.push('/weekly-planner') }}
+            />
+          ) : (
+            <EmptyState
+              illustration={
+                <svg viewBox="0 0 148 128" fill="none" aria-hidden="true">
+                  {/* Bag body */}
+                  <path d="M34 52 L114 52 L104 108 L44 108 Z" fill="var(--teal-50)" stroke="var(--teal-200)" strokeWidth="1.5" strokeLinejoin="round" />
+                  {/* Handles */}
+                  <path d="M56 52 C56 28 92 28 92 52" stroke="var(--teal-300)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                  {/* Items in bag */}
+                  <rect x="52" y="60" width="16" height="20" rx="3" fill="var(--amber-200)" stroke="var(--amber-300)" strokeWidth="1" />
+                  <circle cx="92" cy="70" r="12" fill="var(--teal-200)" stroke="var(--teal-300)" strokeWidth="1" />
+                  <rect x="62" y="82" width="28" height="3" rx="1.5" fill="var(--teal-200)" />
+                  {/* Sparkles */}
+                  <path d="M112 18 L114 26 L122 28 L114 30 L112 38 L110 30 L102 28 L110 26 Z" fill="var(--amber-300)" />
+                  <path d="M126 10 L127 14 L131 15 L127 16 L126 20 L125 16 L121 15 L125 14 Z" fill="var(--teal-300)" opacity="0.7" />
+                </svg>
+              }
+              title="Ready to generate"
+              description="You have meals planned this week. Generate your grocery list with one click — we'll pull every ingredient automatically."
+              primaryAction={{ label: 'Generate grocery list', icon: <Sparkles size={15} />, onClick: () => setShowGenModal(true) }}
+              secondaryAction={{ label: 'Add item manually', icon: <Plus size={15} />, onClick: () => setShowAddModal(true) }}
+            />
+          )}
         </motion.div>
       )}
 
