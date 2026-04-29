@@ -344,6 +344,66 @@ export class AIController {
   }
 
   /**
+   * POST /api/ai/save-pantry-recipe
+   * Saves a pantry suggestion as a real recipe so it can be added to a meal plan.
+   * Idempotent: if a recipe with the same title already exists for the user, returns it.
+   */
+  async savePantryRecipe(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId
+      const {
+        title,
+        description,
+        estimatedCalories,
+        prepTimeMinutes,
+        cookTimeMinutes,
+        usedIngredients,
+        missingIngredients,
+        steps,
+      } = req.body
+
+      // Reuse existing recipe instead of creating a duplicate
+      const existing = await recipeRepository.findByTitle(title, userId)
+      if (existing) {
+        res.status(200).json({ success: true, data: { id: existing.id, title: existing.title } })
+        return
+      }
+
+      const allIngredients = [
+        ...(usedIngredients as string[]).map((name: string) => ({ ingredientName: name })),
+        ...(missingIngredients as string[]).map((name: string) => ({ ingredientName: name })),
+      ]
+
+      const recipeSteps = (steps as string[]).map((text: string, i: number) => ({
+        stepNumber: i + 1,
+        instructionText: text,
+      }))
+
+      const saved = await recipeRepository.create(
+        {
+          title,
+          description,
+          calories: estimatedCalories,
+          prepTimeMinutes,
+          cookTimeMinutes,
+          ingredients: allIngredients,
+          steps: recipeSteps,
+        },
+        userId,
+        true
+      )
+
+      res.status(201).json({ success: true, data: { id: saved.id, title: saved.title } })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
    * POST /api/ai/pantry-suggestions
    * Suggests recipes based on pantry contents
    */

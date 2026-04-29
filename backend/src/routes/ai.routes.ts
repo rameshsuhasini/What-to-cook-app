@@ -135,6 +135,20 @@ router.post(
   aiController.generateSlotRecipe.bind(aiController)
 )
 
+// ── POST /api/ai/save-pantry-recipe ──────
+router.post(
+  '/save-pantry-recipe',
+  authenticate,
+  [
+    body('title').trim().notEmpty().withMessage('title is required'),
+    body('steps').isArray({ min: 1 }).withMessage('steps must be a non-empty array'),
+    body('usedIngredients').isArray().withMessage('usedIngredients must be an array'),
+    body('missingIngredients').isArray().withMessage('missingIngredients must be an array'),
+  ],
+  validate,
+  aiController.savePantryRecipe.bind(aiController)
+)
+
 // ── POST /api/ai/pantry-suggestions ──────
 router.post(
   '/pantry-suggestions',

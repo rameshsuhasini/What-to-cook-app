@@ -1116,6 +1116,42 @@
   margin-top: 1px;
 }
 
+/* ── Suggestion card footer ─────────── */
+.psc-card-footer {
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--sand-100);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.psc-add-plan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--teal-400);
+  background: var(--teal-50, rgba(29,158,117,0.06));
+  color: var(--teal-600);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.psc-add-plan-btn:hover:not(:disabled) {
+  background: var(--teal-400);
+  color: white;
+}
+
+.psc-add-plan-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes psc-spin { to { transform: rotate(360deg); } }
+.psc-spin { animation: psc-spin 0.7s linear infinite; }
+
 /* ── Recipe card skeleton ────────────── */
 @keyframes recipe-shimmer {
   to { background-position: -200% 0; }

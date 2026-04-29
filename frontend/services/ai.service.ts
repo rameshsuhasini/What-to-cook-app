@@ -77,4 +77,9 @@ export const aiApi = {
     const res = await api.post('/ai/generate-starter-pack')
     return res.data.data
   },
+
+  savePantryRecipe: async (suggestion: PantryRecipeSuggestion): Promise<{ id: string; title: string }> => {
+    const res = await api.post('/ai/save-pantry-recipe', suggestion)
+    return res.data.data
+  },
 }
