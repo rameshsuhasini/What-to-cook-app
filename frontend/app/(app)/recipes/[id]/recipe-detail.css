@@ -154,6 +154,54 @@
   font-weight: 600;
 }
 
+/* ── Serving counter ─────────────────── */
+.serving-counter {
+  display: inline-flex;
+  align-items: center;
+  background: var(--sand-100);
+  border: 1px solid var(--sand-200);
+  border-radius: 100px;
+  padding: 2px;
+}
+
+.serving-counter-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: all var(--transition);
+}
+
+.serving-counter-btn:hover:not(:disabled) {
+  background: white;
+  color: var(--teal-600);
+}
+
+.serving-counter-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.serving-counter-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
 .detail-actions {
   display: flex;
   align-items: center;

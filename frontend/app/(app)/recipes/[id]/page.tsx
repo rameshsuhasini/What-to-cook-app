@@ -43,6 +43,7 @@ export default function RecipeDetailPage() {
   const queryClient = useQueryClient()
 
   const [showPlanModal, setShowPlanModal] = useState(false)
+  const [servings, setServings] = useState<number | null>(null)
 
   const { data: recipe, isLoading, isError } = useQuery({
     queryKey: ['recipe', id],
@@ -84,6 +85,15 @@ export default function RecipeDetailPage() {
   const totalMins = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0)
   const dietLabel = DIET_LABELS[recipe.dietType]
   const emoji = recipe.cuisine ? (CUISINE_EMOJI[recipe.cuisine] ?? '🍽️') : '🍽️'
+
+  const baseServings = recipe.servings ?? 1
+  const currentServings = servings ?? baseServings
+  const scale = currentServings / baseServings
+
+  function scaleQty(qty: number | null): string {
+    if (qty == null) return ''
+    return parseFloat((qty * scale).toFixed(2)).toString()
+  }
 
   return (
     <div className="detail-root">
@@ -145,10 +155,24 @@ export default function RecipeDetailPage() {
               </span>
             )}
             {recipe.servings && (
-              <span className="detail-meta-item">
-                <Users size={14} />
-                <strong>{recipe.servings}</strong> servings
-              </span>
+              <div className="serving-counter">
+                <button
+                  className="serving-counter-btn"
+                  onClick={() => setServings(Math.max(1, currentServings - 1))}
+                  disabled={currentServings <= 1}
+                  aria-label="Decrease servings"
+                >−</button>
+                <span className="serving-counter-val">
+                  <Users size={13} />
+                  {currentServings} {currentServings === 1 ? 'serving' : 'servings'}
+                </span>
+                <button
+                  className="serving-counter-btn"
+                  onClick={() => setServings(Math.min(20, currentServings + 1))}
+                  disabled={currentServings >= 20}
+                  aria-label="Increase servings"
+                >+</button>
+              </div>
             )}
           </div>
 
@@ -182,30 +206,30 @@ export default function RecipeDetailPage() {
         >
           {recipe.calories != null && (
             <div className="macro-tile calories">
-              <div className="macro-tile-value">{recipe.calories}</div>
+              <div className="macro-tile-value">{Math.round(recipe.calories * scale)}</div>
               <div className="macro-tile-label">Calories</div>
-              <div className="macro-tile-unit">kcal / serving</div>
+              <div className="macro-tile-unit">{scale === 1 ? 'kcal / serving' : 'kcal total'}</div>
             </div>
           )}
           {recipe.protein != null && (
             <div className="macro-tile protein">
-              <div className="macro-tile-value">{recipe.protein}g</div>
+              <div className="macro-tile-value">{Math.round(recipe.protein * scale)}g</div>
               <div className="macro-tile-label">Protein</div>
-              <div className="macro-tile-unit">per serving</div>
+              <div className="macro-tile-unit">{scale === 1 ? 'per serving' : `for ${currentServings}`}</div>
             </div>
           )}
           {recipe.carbs != null && (
             <div className="macro-tile carbs">
-              <div className="macro-tile-value">{recipe.carbs}g</div>
+              <div className="macro-tile-value">{Math.round(recipe.carbs * scale)}g</div>
               <div className="macro-tile-label">Carbs</div>
-              <div className="macro-tile-unit">per serving</div>
+              <div className="macro-tile-unit">{scale === 1 ? 'per serving' : `for ${currentServings}`}</div>
             </div>
           )}
           {recipe.fat != null && (
             <div className="macro-tile fat">
-              <div className="macro-tile-value">{recipe.fat}g</div>
+              <div className="macro-tile-value">{Math.round(recipe.fat * scale)}g</div>
               <div className="macro-tile-label">Fat</div>
-              <div className="macro-tile-unit">per serving</div>
+              <div className="macro-tile-unit">{scale === 1 ? 'per serving' : `for ${currentServings}`}</div>
             </div>
           )}
         </motion.div>
@@ -231,7 +255,7 @@ export default function RecipeDetailPage() {
                   <span className="ingredient-name">{ing.ingredientName}</span>
                   {(ing.quantity != null || ing.unit) && (
                     <span className="ingredient-qty">
-                      {ing.quantity != null ? ing.quantity : ''}
+                      {ing.quantity != null ? scaleQty(ing.quantity) : ''}
                       {ing.unit ? ` ${ing.unit}` : ''}
                     </span>
                   )}
