@@ -33,7 +33,10 @@ const getClient = (): Anthropic => {
 
 // ── Model config ─────────────────────────
 
+// Sonnet: complex reasoning tasks (meal planning, health insights, pantry suggestions)
 const MODEL = 'claude-sonnet-4-20250514'
+// Haiku: structured JSON tasks that don't need deep reasoning (recipe generation)
+export const FAST_MODEL = 'claude-haiku-4-5-20251001'
 
 // ── Token limits per feature ─────────────
 // Set thoughtfully — too low = truncated
@@ -59,6 +62,7 @@ export interface AIRequestOptions {
   systemPrompt: string
   userMessage: string
   maxTokens: number
+  model?: string  // defaults to Sonnet; pass FAST_MODEL for recipe generation
 }
 
 /**
@@ -71,7 +75,7 @@ export const sendAIMessage = async (
   const anthropic = getClient()
 
   const response = await anthropic.messages.create({
-    model: MODEL,
+    model: options.model ?? MODEL,
     max_tokens: options.maxTokens,
     system: options.systemPrompt,
     messages: [{ role: 'user', content: options.userMessage }],

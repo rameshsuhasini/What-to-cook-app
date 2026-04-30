@@ -109,11 +109,22 @@ export const mealPlanApi = {
   },
 
   generateSlotRecipe: async (mealPlanItemId: string): Promise<void> => {
-    // Single slot recipe generation — each call is ~8-12s
     await api.post(
       '/ai/generate-slot-recipe',
       { mealPlanItemId },
       { timeout: 60_000 }
     )
+  },
+
+  generateBatchSlotRecipes: async (
+    itemIds: string[]
+  ): Promise<{ completed: number; total: number }> => {
+    // All slots generated in parallel on the backend — one call replaces N sequential calls
+    const res = await api.post(
+      '/ai/generate-batch-slot-recipes',
+      { itemIds },
+      { timeout: 120_000 }
+    )
+    return res.data.data
   },
 }

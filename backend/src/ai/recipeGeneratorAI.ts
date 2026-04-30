@@ -8,7 +8,7 @@
 // - Nutritional goals
 // ─────────────────────────────────────────
 
-import { sendAIMessageJSON, TOKEN_LIMITS, JSON_INSTRUCTION } from './aiService'
+import { sendAIMessageJSON, TOKEN_LIMITS, FAST_MODEL, JSON_INSTRUCTION } from './aiService'
 import { UserContext, GenerateRecipeDTO, AIGeneratedRecipe } from './types/ai.types'
 
 /**
@@ -157,6 +157,7 @@ export const generateRecipe = async (
     systemPrompt: buildSystemPrompt(user),
     userMessage: buildUserMessage(dto, user),
     maxTokens: TOKEN_LIMITS.recipeGenerator,
+    model: FAST_MODEL,
   })
 
   return validateRecipe(recipe)

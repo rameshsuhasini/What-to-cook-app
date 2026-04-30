@@ -351,6 +351,60 @@ export class AIController {
   }
 
   /**
+   * POST /api/ai/generate-batch-slot-recipes
+   * Generates full recipes for multiple meal plan items in parallel.
+   * Replaces the sequential per-slot calls from the frontend.
+   * Idempotent per slot: skips any item that already has a recipeId.
+   */
+  async generateBatchSlotRecipes(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId
+      const { itemIds } = req.body as { itemIds: string[] }
+
+      const userContext = await this.getUserContext(userId)
+      const pantryIngredients = await pantryRepository.getAllIngredientNames(userId)
+
+      const results = await Promise.allSettled(
+        itemIds.map(async (mealPlanItemId) => {
+          const item = await mealPlanRepository.findItemById(mealPlanItemId)
+          if (!item || item.mealPlan.userId !== userId) return
+          if (item.recipeId) return
+
+          const mealLabel = item.mealType.charAt(0) + item.mealType.slice(1).toLowerCase()
+          const prompt = `${item.customMealName ?? 'healthy meal'} (${mealLabel})`
+
+          const aiRecipe = await generateRecipe(
+            { prompt, availableIngredients: pantryIngredients },
+            userContext
+          )
+
+          const slotImageUrl = await fetchFoodImage(aiRecipe.title)
+          const savedRecipe = await recipeRepository.create(
+            { ...aiRecipe, imageUrl: slotImageUrl ?? undefined },
+            userId,
+            true
+          )
+
+          await mealPlanRepository.updateItem(item.id, { recipeId: savedRecipe.id })
+        })
+      )
+
+      const completed = results.filter((r) => r.status === 'fulfilled').length
+
+      res.status(200).json({
+        success: true,
+        data: { completed, total: itemIds.length },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
    * POST /api/ai/save-pantry-recipe
    * Saves a pantry suggestion as a real recipe so it can be added to a meal plan.
    * Idempotent: if a recipe with the same title already exists for the user, returns it.

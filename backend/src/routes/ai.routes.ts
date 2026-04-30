@@ -135,6 +135,23 @@ router.post(
   aiController.generateSlotRecipe.bind(aiController)
 )
 
+// ── POST /api/ai/generate-batch-slot-recipes ──
+// Generates recipes for multiple meal plan slots in parallel.
+// One call replaces N sequential slot-recipe calls.
+router.post(
+  '/generate-batch-slot-recipes',
+  authenticate,
+  createRateLimiter(10, 10 * 60 * 1000),
+  [
+    body('itemIds')
+      .isArray({ min: 1 }).withMessage('itemIds must be a non-empty array'),
+    body('itemIds.*')
+      .isString().withMessage('Each itemId must be a string'),
+  ],
+  validate,
+  aiController.generateBatchSlotRecipes.bind(aiController)
+)
+
 // ── POST /api/ai/save-pantry-recipe ──────
 router.post(
   '/save-pantry-recipe',

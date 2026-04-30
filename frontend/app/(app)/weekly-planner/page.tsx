@@ -1091,37 +1091,28 @@ export default function WeeklyPlannerPage() {
         return
       }
 
-      // Phase 2: generate full recipes one by one
+      // Phase 2: generate all recipes in parallel via batch endpoint
       showToast(`Meal plan ready — generating ${itemIds.length} recipes…`)
       setPendingItemIds(new Set(itemIds))
       setGenProgress({ done: 0, total: itemIds.length })
 
-      let completed = 0
-      for (const id of itemIds) {
-        try {
-          await mealPlanApi.generateSlotRecipe(id)
-          completed++
-        } catch {
-          // swallow individual failures — continue with remaining slots
-        }
-        setPendingItemIds(prev => {
-          const next = new Set(prev)
-          next.delete(id)
-          return next
-        })
-        setGenProgress({ done: completed, total: itemIds.length })
-        // Refresh the planner view after each recipe is ready
+      try {
+        const result = await mealPlanApi.generateBatchSlotRecipes(itemIds)
+        setPendingItemIds(new Set())
+        setGenProgress(null)
         queryClient.invalidateQueries({ queryKey: ['meal-plan-week', weekStartISO] })
+        showToast(
+          result.completed === itemIds.length
+            ? 'All recipes ready!'
+            : `Done — ${result.completed} of ${itemIds.length} recipes generated`,
+          result.completed === itemIds.length ? 'ok' : 'error'
+        )
+      } catch {
+        setPendingItemIds(new Set())
+        setGenProgress(null)
+        invalidate()
+        showToast('Some recipes failed to generate', 'error')
       }
-
-      setPendingItemIds(new Set())
-      setGenProgress(null)
-      showToast(
-        completed === itemIds.length
-          ? 'All recipes ready!'
-          : `Done — ${completed} of ${itemIds.length} recipes generated`,
-        completed === itemIds.length ? 'ok' : 'error'
-      )
     },
     onError: () => {
       setShowAI(false)
@@ -1188,7 +1179,7 @@ export default function WeeklyPlannerPage() {
             transition={{ duration: 0.2 }}
           >
             <Loader2 size={14} className="spin-icon" style={{ flexShrink: 0 }} />
-            <span>Generating recipes… ({genProgress.done}/{genProgress.total})</span>
+            <span>Generating {genProgress.total} recipes in parallel…</span>
             <div className="gen-progress-track">
               <div
                 className="gen-progress-fill"
