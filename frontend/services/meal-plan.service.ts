@@ -100,9 +100,8 @@ export const mealPlanApi = {
       { weekStartDate, preferences, targetDates, usePantry },
       { timeout: 90_000 }
     )
-    // Capture newly created item IDs before refetching
-    const newItemIds: string[] =
-      aiRes.data?.data?.mealPlan?.items?.map((item: { id: string }) => item.id) ?? []
+    // Use only the newly created item IDs returned by the backend
+    const newItemIds: string[] = aiRes.data?.data?.newItemIds ?? []
 
     // Fetch fresh week view after AI populates it
     const weekRes = await api.get('/meal-plans/week', { params: { date: weekStartDate } })

@@ -110,10 +110,25 @@ export class MealPlanRepository {
   async addItem(mealPlanId: string, item: CreateMealPlanItemDTO) {
     const date = new Date(item.date)
     return prisma.$transaction(async (tx) => {
-      // Remove any existing item for this exact slot first
-      await tx.mealPlanItem.deleteMany({
+      const existing = await tx.mealPlanItem.findFirst({
         where: { mealPlanId, date, mealType: item.mealType },
+        select: { id: true, recipeId: true },
       })
+
+      // Preserve slots that already have a linked recipe — don't wipe real recipes
+      // with AI-generated custom meal names when the user re-runs generation.
+      if (existing?.recipeId) {
+        return tx.mealPlanItem.findUniqueOrThrow({
+          where: { id: existing.id },
+          select: mealPlanItemSelect,
+        })
+      }
+
+      // Replace any existing custom meal slot with new AI content
+      if (existing) {
+        await tx.mealPlanItem.delete({ where: { id: existing.id } })
+      }
+
       return tx.mealPlanItem.create({
         data: {
           mealPlanId,

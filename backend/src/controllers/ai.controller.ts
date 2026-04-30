@@ -131,10 +131,12 @@ export class AIController {
 
       const mealPlanId = mealPlan.id
 
-      // Save all meal slots immediately as named meals (no inline recipe generation).
-      // This keeps the response well under platform timeout limits (~10s total).
-      // The AI already provides title, description, and estimated macros — enough
-      // to display a rich planner view. Recipe details can be generated on demand.
+      // Save meal slots as named meals. Slots that already have a linked recipe are
+      // preserved — only empty/custom slots are replaced with new AI content.
+      // Collect IDs of newly created slots so the frontend only generates recipes
+      // for those, not for slots that already have real recipe data.
+      const newItemIds: string[] = []
+
       await Promise.all(
         aiPlan.days.map(async (day) => {
           const slots = [
@@ -144,7 +146,7 @@ export class AIController {
             ...(day.snack ? [{ mealType: 'SNACK' as const, meal: day.snack }] : []),
           ]
 
-          await Promise.all(
+          const items = await Promise.all(
             slots.map(({ mealType, meal }) =>
               mealPlanRepository.addItem(mealPlanId, {
                 date:           day.date,
@@ -154,12 +156,17 @@ export class AIController {
               })
             )
           )
+
+          // Only newly created items (no recipeId yet) need recipe generation
+          items.forEach(item => {
+            if (item && !item.recipeId) newItemIds.push(item.id)
+          })
         })
       )
 
       res.status(201).json({
         success: true,
-        data: { mealPlan, aiPlan },
+        data: { mealPlan, aiPlan, newItemIds },
       })
     } catch (error) {
       next(error)
