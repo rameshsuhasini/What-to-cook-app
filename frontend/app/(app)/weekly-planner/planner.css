@@ -1399,107 +1399,189 @@
   margin-top: 3px;
 }
 
-/* ── Per-day breakdown ───────────────────── */
-.day-rows {
-  display: flex;
-  flex-direction: column;
-  margin-top: 1rem;
+/* ── Week at a Glance — vertical bar chart ─ */
+.wag-chart {
+  position: relative;
+  margin-top: 1.25rem;
 }
 
-.day-row {
+.wag-goal-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--sand-300, #c4bfb9) 0px, var(--sand-300, #c4bfb9) 5px,
+    transparent 5px, transparent 11px
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+.wag-goal-label {
+  position: absolute;
+  right: 0;
+  top: -9px;
+  font-size: 0.63rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  background: white;
+  padding: 0 4px;
+  letter-spacing: 0.01em;
+}
+
+.wag-columns {
   display: grid;
-  grid-template-columns: 72px 1fr 110px 170px;
-  align-items: center;
-  gap: 12px;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid var(--sand-100);
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
 }
 
-.day-row:last-child { border-bottom: none; }
-
-.day-row--empty { opacity: 0.55; }
-
-.day-row-label {
+.wag-col {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 2px;
+  border-radius: 10px;
+  transition: background var(--transition);
+  text-align: center;
 }
 
-.day-row-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-primary);
+.wag-col:hover:not(.wag-col--empty) {
+  background: var(--sand-50, #faf9f7);
 }
 
-.day-row-date {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  font-weight: 300;
+.wag-col--selected {
+  background: var(--sand-100) !important;
 }
 
-.day-row-bar {
-  height: 7px;
+.wag-col--empty {
+  cursor: default;
+}
+
+.wag-bar-cal {
+  font-size: 0.63rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-height: 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+  letter-spacing: -0.02em;
+  width: 100%;
+}
+
+.wag-bar-track {
+  width: 100%;
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.wag-bar {
+  width: 100%;
+  border-radius: 6px 6px 3px 3px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+}
+
+.wag-bar-stub {
+  width: 50%;
+  height: 4px;
+  border-radius: 3px;
   background: var(--sand-100);
-  border-radius: 999px;
-  overflow: hidden;
+  margin-bottom: 1px;
 }
 
-.day-row-fill {
-  height: 100%;
-  border-radius: 999px;
-  min-width: 3px;
+.wag-day-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-top: 7px;
 }
 
-.day-row-cal {
-  text-align: right;
-  font-family: var(--font-display);
-  font-size: 0.88rem;
+.wag-day-name {
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
-  letter-spacing: -0.01em;
+  line-height: 1;
 }
 
-.day-row-cal-unit {
-  font-size: 0.7rem;
-  font-weight: 300;
+.wag-day-date {
+  font-size: 0.6rem;
   color: var(--text-muted);
+  font-weight: 300;
+  line-height: 1;
 }
 
-.day-row-macros {
+.wag-day-label--today .wag-day-name {
+  color: var(--teal-600, #0d9488);
+}
+
+.wag-day-label--today .wag-day-date {
+  color: var(--teal-500, #14b8a6);
+}
+
+.wag-today-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--teal-400);
+  margin-top: 3px;
+}
+
+/* Detail strip — appears when a bar is clicked */
+.wag-detail {
+  margin-top: 14px;
+  background: var(--sand-50, #faf9f7);
+  border: 1.5px solid var(--sand-200);
+  border-radius: 10px;
+  padding: 12px 18px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  justify-content: flex-end;
-  font-size: 0.73rem;
-  color: var(--text-secondary);
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wag-detail-day {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
-.day-row-macro {
-  display: inline-flex;
-  align-items: baseline;
+.wag-detail-macros {
+  display: flex;
+  gap: 22px;
+}
+
+.wag-detail-macro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 2px;
 }
 
-.day-row-macro-label {
+.wag-detail-val {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
   font-weight: 700;
-  font-size: 0.65rem;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.wag-detail-label {
+  font-size: 0.6rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.day-row-macro-sep {
-  color: var(--text-muted);
-  font-weight: 300;
-}
-
-.day-row-no-meals {
-  grid-column: 2 / -1;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-style: italic;
-  font-weight: 300;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 /* ── Summary row ─────────────────────────── */
@@ -1531,10 +1613,9 @@
 }
 
 @media (max-width: 700px) {
-  .day-row {
-    grid-template-columns: 64px 1fr 90px;
-  }
-  .day-row-macros { display: none; }
+  .wag-day-date    { display: none; }
+  .wag-bar-cal     { font-size: 0.58rem; }
+  .wag-detail-macros { gap: 14px; }
 }
 
 .nutrition-empty {
